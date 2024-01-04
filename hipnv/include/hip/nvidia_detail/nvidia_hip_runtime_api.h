@@ -709,6 +709,7 @@ typedef struct cudaTextureDesc hipTextureDesc;
 typedef struct cudaResourceViewDesc hipResourceViewDesc;
 typedef CUDA_TEXTURE_DESC HIP_TEXTURE_DESC;
 typedef CUDA_RESOURCE_VIEW_DESC HIP_RESOURCE_VIEW_DESC;
+typedef CUDA_MEMSET_NODE_PARAMS HIP_MEMSET_NODE_PARAMS;
 // adding code for hipmemSharedConfig
 #define hipSharedMemBankSizeDefault cudaSharedMemBankSizeDefault
 #define hipSharedMemBankSizeFourByte cudaSharedMemBankSizeFourByte
@@ -4118,6 +4119,27 @@ inline static hipError_t hipGraphNodeSetEnabled(hipGraphExec_t hGraphExec, hipGr
 inline static hipError_t hipGraphNodeGetEnabled(hipGraphExec_t hGraphExec, hipGraphNode_t hNode,
                                                 unsigned int* isEnabled) {
     return hipCUDAErrorTohipError(cudaGraphNodeGetEnabled(hGraphExec, hNode, isEnabled));
+}
+
+inline static hipError_t hipDrvGraphAddMemsetNode(hipGraphNode_t* phGraphNode, hipGraph_t hGraph,
+                                 const hipGraphNode_t* dependencies, size_t numDependencies,
+                                 const HIP_MEMSET_NODE_PARAMS* memsetParams, hipCtx_t ctx) {
+    return hipCUResultTohipError(cuGraphAddMemsetNode(phGraphNode, hGraph, dependencies, numDependencies,
+                                    memsetParams, ctx));
+}
+
+inline static hipError_t hipDrvGraphAddMemcpyNode(hipGraphNode_t* phGraphNode, hipGraph_t hGraph,
+                                    const hipGraphNode_t* dependencies, size_t numDependencies,
+                                    const HIP_MEMCPY3D* copyParams, hipCtx_t ctx) {
+    if(copyParams == NULL) {
+      return hipCUResultTohipError((cuGraphAddMemcpyNode(phGraphNode, hGraph, dependencies,
+                                    numDependencies, NULL, ctx)));
+    } else {
+      CUDA_MEMCPY3D cudaCopy = {0};
+      hipMemcpy3DTocudaMemcpy3D(&cudaCopy, copyParams);
+      return hipCUResultTohipError((cuGraphAddMemcpyNode(phGraphNode, hGraph, dependencies,
+                                    numDependencies, (const CUDA_MEMCPY3D*)&cudaCopy, ctx)));
+    }
 }
 #endif
 #if CUDA_VERSION >= CUDA_11010
