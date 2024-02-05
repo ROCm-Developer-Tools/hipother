@@ -2558,6 +2558,9 @@ inline static hipError_t hipDeviceGetAttribute(int* pi, hipDeviceAttribute_t att
         case hipDeviceAttributeCanUseHostPointerForRegisteredMem:
             cdattr = cudaDevAttrCanUseHostPointerForRegisteredMem;
             break;
+        case hipDeviceAttributeCanUseStreamWaitValue:
+            cdattr = cudaDevAttrReserved92;
+            break;
         case hipDeviceAttributeComputePreemptionSupported:
             cdattr = cudaDevAttrComputePreemptionSupported;
             break;
