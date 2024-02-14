@@ -1,0 +1,16 @@
+mappings:
+  - sourceBranch: amd-staging
+    dependents: #upstream repo details
+      - organization: AMD-Radeon-Driver
+        repo: compute
+        path: hipother
+        branch: amd/stg/runtime-closed
+    dependents: #upstream repo details
+      - organization: AMD-Radeon-Driver
+        repo: compute
+        path: hipother
+        branch: amd/stg/runtime
+
+commitJiraTicket: 'SWDEV-4 -'
+emailSender: no-reply-github@amd.com
+emailRecipients: dl.GitHubSiteAdmin@amd.com
