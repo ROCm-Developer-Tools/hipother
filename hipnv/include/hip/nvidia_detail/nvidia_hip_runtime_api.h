@@ -3211,6 +3211,12 @@ __HIP_DEPRECATED inline static hipError_t hipGetTextureAlignmentOffset(
 }
 #endif
 
+#if CUDA_VERSION >= CUDA_11010
+inline static hipError_t hipGetFuncBySymbol(hipFunction_t* functionPtr, const void* symbolPtr) {
+    return hipCUDAErrorTohipError(cudaGetFuncBySymbol(functionPtr, symbolPtr));
+}
+#endif
+
 inline static hipError_t hipGetChannelDesc(hipChannelFormatDesc* desc, hipArray_const_t array)
 {
     return hipCUDAErrorTohipError(cudaGetChannelDesc(desc,array));
