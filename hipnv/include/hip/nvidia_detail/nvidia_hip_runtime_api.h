@@ -3106,7 +3106,13 @@ inline static hipError_t hipModuleGetGlobal(hipDeviceptr_t* dptr, size_t* bytes,
 inline static hipError_t hipModuleLoadData(hipModule_t* module, const void* image) {
     return hipCUResultTohipError(cuModuleLoadData(module, image));
 }
-
+#if CUDA_VERSION >= CUDA_12000
+inline static hipError_t hipGetProcAddress(const char* symbol, void** pfn, int version,
+                                           uint64_t flags, hipDriverProcAddressQueryResult* symbolStatus) {
+    return hipCUResultTohipError(cuGetProcAddress(symbol, pfn, version, flags,
+                                                  (CUdriverProcAddressQueryResult*)symbolStatus));
+}
+#endif
 inline static hipError_t hipModuleLoadDataEx(hipModule_t* module, const void* image,
                                              unsigned int numOptions, hipJitOption* options,
                                              void** optionValues) {
