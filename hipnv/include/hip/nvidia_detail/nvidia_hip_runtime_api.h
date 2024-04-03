@@ -39,6 +39,7 @@ THE SOFTWARE.
 #define CUDA_11040 11040
 #define CUDA_11060 11060
 #define CUDA_12000 12000
+#define CUDA_12030 12030
 
 #ifdef __cplusplus
 extern "C" {
@@ -1525,6 +1526,9 @@ typedef cudaGraph_t hipGraph_t;
 typedef cudaGraphNode_t hipGraphNode_t;
 typedef cudaGraphExec_t hipGraphExec_t;
 typedef cudaUserObject_t hipUserObject_t;
+#if CUDA_VERSION >= CUDA_12030
+typedef cudaGraphEdgeData hipGraphEdgeData;
+#endif
 
 typedef enum cudaGraphNodeType hipGraphNodeType;
 #define hipGraphNodeTypeKernel cudaGraphNodeTypeKernel
@@ -3601,7 +3605,15 @@ inline static hipError_t hipArray3DGetDescriptor(HIP_ARRAY3D_DESCRIPTOR* pArrayD
 inline static hipError_t hipStreamBeginCapture(hipStream_t stream, hipStreamCaptureMode mode) {
     return hipCUDAErrorTohipError(cudaStreamBeginCapture(stream, mode));
 }
-
+#if CUDA_VERSION >= CUDA_12030
+inline static hipError_t hipStreamBeginCaptureToGraph(hipStream_t stream, hipGraph_t graph,
+                                        const hipGraphNode_t *dependencies,
+                                        const hipGraphEdgeData *dependencyData,
+                                        size_t numDependencies, hipStreamCaptureMode mode) {
+    return hipCUDAErrorTohipError(cudaStreamBeginCaptureToGraph(
+        stream, graph, dependencies, dependencyData, numDependencies, mode));
+}
+#endif
 inline static hipError_t hipStreamEndCapture(hipStream_t stream, hipGraph_t* pGraph) {
     return hipCUDAErrorTohipError(cudaStreamEndCapture(stream, pGraph));
 }
