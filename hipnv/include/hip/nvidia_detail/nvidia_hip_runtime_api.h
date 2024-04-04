@@ -1574,6 +1574,20 @@ typedef union cudaKernelNodeAttrValue hipKernelNodeAttrValue;
 typedef enum  cudaKernelNodeAttrID hipKernelNodeAttrID;
 #define hipKernelNodeAttributeAccessPolicyWindow cudaKernelNodeAttributeAccessPolicyWindow
 #define hipKernelNodeAttributeCooperative cudaKernelNodeAttributeCooperative
+#define hipKernelNodeAttributePriority cudaKernelNodeAttributePriority
+
+#if CUDA_VERSION >= CUDA_12000
+typedef enum cudaGraphInstantiateResult hipGraphInstantiateResult;
+#define hipGraphInstantiateSuccess cudaGraphInstantiateSuccess
+#define hipGraphInstantiateError cudaGraphInstantiateError
+#define hipGraphInstantiateInvalidStructure cudaGraphInstantiateInvalidStructure
+#define hipGraphInstantiateNodeOperationNotSupported cudaGraphInstantiateNodeOperationNotSupported
+#define hipGraphInstantiateMultipleDevicesNotSupported \
+                                                     cudaGraphInstantiateMultipleDevicesNotSupported
+
+#define hipGraphInstantiateParams cudaGraphInstantiateParams
+#endif
+
 typedef enum cudaAccessProperty hipAccessProperty;
 #define hipAccessPropertyNormal cudaAccessPropertyNormal
 #define hipAccessPropertyStreaming cudaAccessPropertyStreaming
@@ -2543,6 +2557,9 @@ inline static hipError_t hipDeviceGetAttribute(int* pi, hipDeviceAttribute_t att
             break;
         case hipDeviceAttributeCanUseHostPointerForRegisteredMem:
             cdattr = cudaDevAttrCanUseHostPointerForRegisteredMem;
+            break;
+        case hipDeviceAttributeCanUseStreamWaitValue:
+            cdattr = cudaDevAttrReserved92;
             break;
         case hipDeviceAttributeComputePreemptionSupported:
             cdattr = cudaDevAttrComputePreemptionSupported;
@@ -3594,6 +3611,15 @@ inline static hipError_t hipGraphInstantiate(hipGraphExec_t* pGraphExec, hipGrap
     return hipCUDAErrorTohipError(
         cudaGraphInstantiate(pGraphExec, graph, pErrorNode, pLogBuffer, bufferSize));
 }
+
+#if CUDA_VERSION >= CUDA_12000
+inline static hipError_t hipGraphInstantiateWithParams(hipGraphExec_t* pGraphExec, hipGraph_t graph,
+                                                       hipGraphInstantiateParams *instantiateParams)
+                                                       {
+    return hipCUDAErrorTohipError(cudaGraphInstantiateWithParams(pGraphExec, graph,
+                                                                 instantiateParams));
+}
+#endif
 
 #if CUDA_VERSION >= CUDA_11040
 inline static hipError_t hipGraphInstantiateWithFlags(hipGraphExec_t* pGraphExec, hipGraph_t graph,
