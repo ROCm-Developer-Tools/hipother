@@ -2014,6 +2014,16 @@ inline static hipError_t hipMemcpyParam2DAsync(const hip_Memcpy2D* pCopy, hipStr
   }
 }
 
+inline static hipError_t hipDrvMemcpy2DUnaligned(const hip_Memcpy2D* pCopy) {
+  if(pCopy == NULL) {
+    return hipCUResultTohipError(cuMemcpy2DUnaligned(NULL));
+  } else {
+    CUDA_MEMCPY2D cudaCopy = {0};
+    hipMemcpy2DTocudaMemcpy2D(&cudaCopy, pCopy);
+    return hipCUResultTohipError(cuMemcpy2DUnaligned((const CUDA_MEMCPY2D*)&cudaCopy));
+  }
+}
+
 inline static hipError_t hipMemcpy3D(const struct hipMemcpy3DParms *p) {
     return hipCUDAErrorTohipError(cudaMemcpy3D(p));
 }
