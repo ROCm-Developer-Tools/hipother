@@ -478,34 +478,32 @@ typedef struct HIP_RESOURCE_DESC_st
     unsigned int flags;                          /**< Flags (must be zero) */
 } HIP_RESOURCE_DESC;
 
-static inline CUDA_RESOURCE_DESC* hipResourceDesTocudaResourceDes(const HIP_RESOURCE_DESC* p){
-    CUDA_RESOURCE_DESC a;
+static inline void hipResourceDesTocudaResourceDes(CUDA_RESOURCE_DESC* a, const HIP_RESOURCE_DESC* p){
     switch (p->resType) {
         case HIP_RESOURCE_TYPE_ARRAY:
-            a.resType = CU_RESOURCE_TYPE_ARRAY;
+            a->resType = CU_RESOURCE_TYPE_ARRAY;
         case HIP_RESOURCE_TYPE_MIPMAPPED_ARRAY:
-            a.resType = CU_RESOURCE_TYPE_MIPMAPPED_ARRAY;
+            a->resType = CU_RESOURCE_TYPE_MIPMAPPED_ARRAY;
         case HIP_RESOURCE_TYPE_LINEAR:
-            a.resType = CU_RESOURCE_TYPE_LINEAR;
+            a->resType = CU_RESOURCE_TYPE_LINEAR;
         case HIP_RESOURCE_TYPE_PITCH2D:
-            a.resType = CU_RESOURCE_TYPE_PITCH2D;
+            a->resType = CU_RESOURCE_TYPE_PITCH2D;
         default:
-            a.resType = CU_RESOURCE_TYPE_ARRAY;
+            a->resType = CU_RESOURCE_TYPE_ARRAY;
     }
-    a.res.array.hArray = (CUarray)p->res.array.hArray;
-    a.res.mipmap.hMipmappedArray = (CUmipmappedArray)p->res.mipmap.hMipmappedArray;
-    a.res.linear.devPtr = p->res.linear.devPtr;
-    a.res.linear.format = p->res.linear.format;
-    a.res.linear.numChannels = p->res.linear.numChannels;
-    a.res.linear.sizeInBytes = p->res.linear.sizeInBytes;
-    a.res.pitch2D.devPtr = p->res.pitch2D.devPtr;
-    a.res.pitch2D.numChannels = p->res.pitch2D.numChannels;
-    a.res.pitch2D.format = p->res.pitch2D.format;
-    a.res.pitch2D.width = p->res.pitch2D.width;
-    a.res.pitch2D.height = p->res.pitch2D.height;
-    a.res.pitch2D.pitchInBytes = p->res.pitch2D.pitchInBytes;
-    a.flags = p->flags;
-    return &a;
+    a->res.array.hArray = (CUarray)p->res.array.hArray;
+    a->res.mipmap.hMipmappedArray = (CUmipmappedArray)p->res.mipmap.hMipmappedArray;
+    a->res.linear.devPtr = p->res.linear.devPtr;
+    a->res.linear.format = p->res.linear.format;
+    a->res.linear.numChannels = p->res.linear.numChannels;
+    a->res.linear.sizeInBytes = p->res.linear.sizeInBytes;
+    a->res.pitch2D.devPtr = p->res.pitch2D.devPtr;
+    a->res.pitch2D.numChannels = p->res.pitch2D.numChannels;
+    a->res.pitch2D.format = p->res.pitch2D.format;
+    a->res.pitch2D.width = p->res.pitch2D.width;
+    a->res.pitch2D.height = p->res.pitch2D.height;
+    a->res.pitch2D.pitchInBytes = p->res.pitch2D.pitchInBytes;
+    a->flags = p->flags;
 }
 
 typedef struct hip_Memcpy2D {
