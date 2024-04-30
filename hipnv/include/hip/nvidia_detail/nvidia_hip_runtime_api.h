@@ -39,6 +39,7 @@ THE SOFTWARE.
 #define CUDA_11040 11040
 #define CUDA_11060 11060
 #define CUDA_12000 12000
+#define CUDA_12030 12030
 
 #ifdef __cplusplus
 extern "C" {
@@ -709,6 +710,7 @@ typedef struct cudaTextureDesc hipTextureDesc;
 typedef struct cudaResourceViewDesc hipResourceViewDesc;
 typedef CUDA_TEXTURE_DESC HIP_TEXTURE_DESC;
 typedef CUDA_RESOURCE_VIEW_DESC HIP_RESOURCE_VIEW_DESC;
+typedef CUDA_MEMSET_NODE_PARAMS HIP_MEMSET_NODE_PARAMS;
 // adding code for hipmemSharedConfig
 #define hipSharedMemBankSizeDefault cudaSharedMemBankSizeDefault
 #define hipSharedMemBankSizeFourByte cudaSharedMemBankSizeFourByte
@@ -1524,6 +1526,9 @@ typedef cudaGraph_t hipGraph_t;
 typedef cudaGraphNode_t hipGraphNode_t;
 typedef cudaGraphExec_t hipGraphExec_t;
 typedef cudaUserObject_t hipUserObject_t;
+#if CUDA_VERSION >= CUDA_12030
+typedef cudaGraphEdgeData hipGraphEdgeData;
+#endif
 
 typedef enum cudaGraphNodeType hipGraphNodeType;
 #define hipGraphNodeTypeKernel cudaGraphNodeTypeKernel
@@ -3105,7 +3110,13 @@ inline static hipError_t hipModuleGetGlobal(hipDeviceptr_t* dptr, size_t* bytes,
 inline static hipError_t hipModuleLoadData(hipModule_t* module, const void* image) {
     return hipCUResultTohipError(cuModuleLoadData(module, image));
 }
-
+#if CUDA_VERSION >= CUDA_12000
+inline static hipError_t hipGetProcAddress(const char* symbol, void** pfn, int version,
+                                           uint64_t flags, hipDriverProcAddressQueryResult* symbolStatus) {
+    return hipCUResultTohipError(cuGetProcAddress(symbol, pfn, version, flags,
+                                                  (CUdriverProcAddressQueryResult*)symbolStatus));
+}
+#endif
 inline static hipError_t hipModuleLoadDataEx(hipModule_t* module, const void* image,
                                              unsigned int numOptions, hipJitOption* options,
                                              void** optionValues) {
@@ -3207,6 +3218,12 @@ inline static hipError_t hipGetTextureObjectResourceDesc(hipResourceDesc* pResDe
 __HIP_DEPRECATED inline static hipError_t hipGetTextureAlignmentOffset(
     size_t* offset, const struct textureReference* texref) {
     return hipCUDAErrorTohipError(cudaGetTextureAlignmentOffset(offset,texref));
+}
+#endif
+
+#if CUDA_VERSION >= CUDA_11010
+inline static hipError_t hipGetFuncBySymbol(hipFunction_t* functionPtr, const void* symbolPtr) {
+    return hipCUDAErrorTohipError(cudaGetFuncBySymbol(functionPtr, symbolPtr));
 }
 #endif
 
@@ -3588,7 +3605,15 @@ inline static hipError_t hipArray3DGetDescriptor(HIP_ARRAY3D_DESCRIPTOR* pArrayD
 inline static hipError_t hipStreamBeginCapture(hipStream_t stream, hipStreamCaptureMode mode) {
     return hipCUDAErrorTohipError(cudaStreamBeginCapture(stream, mode));
 }
-
+#if CUDA_VERSION >= CUDA_12030
+inline static hipError_t hipStreamBeginCaptureToGraph(hipStream_t stream, hipGraph_t graph,
+                                        const hipGraphNode_t *dependencies,
+                                        const hipGraphEdgeData *dependencyData,
+                                        size_t numDependencies, hipStreamCaptureMode mode) {
+    return hipCUDAErrorTohipError(cudaStreamBeginCaptureToGraph(
+        stream, graph, dependencies, dependencyData, numDependencies, mode));
+}
+#endif
 inline static hipError_t hipStreamEndCapture(hipStream_t stream, hipGraph_t* pGraph) {
     return hipCUDAErrorTohipError(cudaStreamEndCapture(stream, pGraph));
 }
@@ -4118,6 +4143,27 @@ inline static hipError_t hipGraphNodeSetEnabled(hipGraphExec_t hGraphExec, hipGr
 inline static hipError_t hipGraphNodeGetEnabled(hipGraphExec_t hGraphExec, hipGraphNode_t hNode,
                                                 unsigned int* isEnabled) {
     return hipCUDAErrorTohipError(cudaGraphNodeGetEnabled(hGraphExec, hNode, isEnabled));
+}
+
+inline static hipError_t hipDrvGraphAddMemsetNode(hipGraphNode_t* phGraphNode, hipGraph_t hGraph,
+                                 const hipGraphNode_t* dependencies, size_t numDependencies,
+                                 const HIP_MEMSET_NODE_PARAMS* memsetParams, hipCtx_t ctx) {
+    return hipCUResultTohipError(cuGraphAddMemsetNode(phGraphNode, hGraph, dependencies, numDependencies,
+                                    memsetParams, ctx));
+}
+
+inline static hipError_t hipDrvGraphAddMemcpyNode(hipGraphNode_t* phGraphNode, hipGraph_t hGraph,
+                                    const hipGraphNode_t* dependencies, size_t numDependencies,
+                                    const HIP_MEMCPY3D* copyParams, hipCtx_t ctx) {
+    if(copyParams == NULL) {
+      return hipCUResultTohipError((cuGraphAddMemcpyNode(phGraphNode, hGraph, dependencies,
+                                    numDependencies, NULL, ctx)));
+    } else {
+      CUDA_MEMCPY3D cudaCopy = {0};
+      hipMemcpy3DTocudaMemcpy3D(&cudaCopy, copyParams);
+      return hipCUResultTohipError((cuGraphAddMemcpyNode(phGraphNode, hGraph, dependencies,
+                                    numDependencies, (const CUDA_MEMCPY3D*)&cudaCopy, ctx)));
+    }
 }
 #endif
 #if CUDA_VERSION >= CUDA_11010
