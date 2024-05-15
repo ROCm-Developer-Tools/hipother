@@ -2582,6 +2582,42 @@ inline static hipError_t hipDeviceGetAttribute(int* pi, hipDeviceAttribute_t att
         case hipDeviceAttributeHostNativeAtomicSupported:
             cdattr = cudaDevAttrHostNativeAtomicSupported;
             break;
+        case hipDeviceAttributeDeviceOverlap:
+            cdattr = cudaDevAttrGpuOverlap;
+            break;
+        case hipDeviceAttributeLocalL1CacheSupported:
+            cdattr = cudaDevAttrLocalL1CacheSupported;
+            break;
+        case hipDeviceAttributeMaxSurface1D:
+            cdattr = cudaDevAttrMaxSurface1DWidth;
+            break;
+        case hipDeviceAttributeMaxTexture1DLinear:
+            cdattr = cudaDevAttrMaxTexture1DLinearWidth;
+            break;
+        case hipDeviceAttributeMaxTexture1DMipmap:
+            cdattr = cudaDevAttrMaxTexture1DMipmappedWidth;
+            break;
+        case hipDeviceAttributeMaxTextureCubemap:
+            cdattr = cudaDevAttrMaxTextureCubemapWidth;
+            break;
+        case hipDeviceAttributePciDomainID:
+            cdattr = cudaDevAttrPciDomainId;
+            break;
+        case hipDeviceAttributePersistingL2CacheMaxSize:
+            cdattr = cudaDevAttrMaxPersistingL2CacheSize;
+            break;
+        case hipDeviceAttributeMaxRegistersPerMultiprocessor:
+            cdattr = cudaDevAttrMaxRegistersPerMultiprocessor;
+            break;
+        case hipDeviceAttributeSharedMemPerBlockOptin:
+            cdattr = cudaDevAttrMaxSharedMemoryPerBlockOptin;
+            break;
+        case hipDeviceAttributeSharedMemPerMultiprocessor:
+            cdattr = cudaDevAttrMaxSharedMemoryPerMultiprocessor;
+            break;
+        case hipDeviceAttributeMemoryPoolSupportedHandleTypes:
+            cdattr = cudaDevAttrMemoryPoolSupportedHandleTypes;
+            break;
         default:
             return hipCUDAErrorTohipError(cudaErrorInvalidValue);
     }
