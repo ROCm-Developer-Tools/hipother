@@ -5,7 +5,6 @@ mappings:
         repo: compute
         path: hipother
         branch: amd/stg/runtime-closed
-    dependents: #upstream repo details
       - organization: AMD-Radeon-Driver
         repo: compute
         path: hipother
