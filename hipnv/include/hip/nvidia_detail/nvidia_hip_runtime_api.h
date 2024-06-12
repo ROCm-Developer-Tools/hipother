@@ -4217,6 +4217,40 @@ inline static hipError_t hipGraphUpload(hipGraphExec_t graphExec, hipStream_t st
     return hipCUDAErrorTohipError(cudaGraphUpload(graphExec, stream));
 }
 #endif
+inline static hipError_t hipMemcpyAtoD(hipDeviceptr_t dstDevice, hipArray_t srcArray,
+                                       size_t srcOffset, size_t ByteCount) {
+    return hipCUResultTohipError(cuMemcpyAtoD(dstDevice, (CUarray)srcArray, srcOffset, ByteCount));
+}
+inline static hipError_t hipMemcpyDtoA(hipArray_t dstArray, size_t dstOffset,
+                                       hipDeviceptr_t srcDevice, size_t ByteCount) {
+    return hipCUResultTohipError(cuMemcpyDtoA((CUarray)dstArray, dstOffset, srcDevice, ByteCount));
+}
+inline static hipError_t hipMemcpyAtoA(hipArray_t dstArray, size_t dstOffset, hipArray_t srcArray,
+                                       size_t srcOffset, size_t ByteCount) {
+    return hipCUResultTohipError(
+      cuMemcpyAtoA((CUarray)dstArray, dstOffset, (CUarray)srcArray, srcOffset, ByteCount));
+}
+inline static hipError_t hipMemcpyAtoHAsync(void* dstHost, hipArray_t srcArray, size_t srcOffset,
+                                            size_t ByteCount, hipStream_t stream) {
+    return hipCUResultTohipError(
+      cuMemcpyAtoHAsync(dstHost, (CUarray)srcArray, srcOffset, ByteCount, stream));
+}
+inline static hipError_t hipMemcpyHtoAAsync(hipArray_t dstArray, size_t dstOffset,
+                                            const void* srcHost, size_t ByteCount,
+                                            hipStream_t stream) {
+    return hipCUResultTohipError(
+      cuMemcpyHtoAAsync((CUarray)dstArray, dstOffset, srcHost, ByteCount, stream));
+}
+inline static hipError_t hipMemcpy2DArrayToArray(hipArray_t dst, size_t wOffsetDst,
+                                                 size_t hOffsetDst, hipArray_const_t src,
+                                                 size_t wOffsetSrc, size_t hOffsetSrc, size_t width,
+                                                 size_t height, hipMemcpyKind kind) {
+    return hipCUDAErrorTohipError(cudaMemcpy2DArrayToArray(
+      dst, wOffsetDst, hOffsetDst, src, wOffsetSrc, hOffsetSrc, width, height, kind));
+}
+inline static hipError_t hipSetValidDevices(int* device_arr, int len) {
+    return hipCUDAErrorTohipError(cudaSetValidDevices(device_arr, len));
+}
 #endif  //__CUDACC__
 
 #endif  // HIP_INCLUDE_HIP_NVIDIA_DETAIL_HIP_RUNTIME_API_H
