@@ -904,6 +904,10 @@ inline static hipError_t hipCUDAErrorTohipError(cudaError_t cuError) {
             return hipErrorStreamCaptureWrongThread;
         case cudaErrorGraphExecUpdateFailure:
             return hipErrorGraphExecUpdateFailure;
+        case cudaErrorInvalidChannelDescriptor:
+            return hipErrorInvalidChannelDescriptor;
+        case cudaErrorInvalidTexture:
+            return hipErrorInvalidTexture;
         case cudaErrorUnknown:
         default:
             return hipErrorUnknown;  // Note - translated error.
@@ -1350,6 +1354,10 @@ inline static cudaError_t hipErrorToCudaError(hipError_t hError) {
             return cudaErrorGraphExecUpdateFailure;
         case hipErrorNotSupported:
             return cudaErrorNotSupported;
+        case hipErrorInvalidChannelDescriptor:
+            return cudaErrorInvalidChannelDescriptor;
+        case hipErrorInvalidTexture:
+            return cudaErrorInvalidTexture;
         // HSA: does not exist in CUDA
         case hipErrorRuntimeMemory:
         // HSA: does not exist in CUDA
