@@ -3607,6 +3607,10 @@ __HIP_DEPRECATED inline static hipError_t hipTexRefSetFilterMode(hipTexRef hTexR
     return hipCUResultTohipError(cuTexRefSetFilterMode(hTexRef,fm));
 }
 
+inline static hipError_t hipTexRefGetAddress(hipDeviceptr_t* dev_ptr, hipTexRef texRef) {
+    return hipCUResultTohipError(cuTexRefGetAddress(dev_ptr, texRef));
+}
+
 inline static hipError_t hipTexRefSetAddress(size_t *ByteOffset, hipTexRef hTexRef, hipDeviceptr_t dptr, size_t bytes){
     return hipCUResultTohipError(cuTexRefSetAddress(ByteOffset,hTexRef,dptr,bytes));
 }
