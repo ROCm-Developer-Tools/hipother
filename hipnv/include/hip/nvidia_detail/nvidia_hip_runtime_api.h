@@ -3259,6 +3259,11 @@ inline static hipError_t hipGetTextureObjectResourceDesc(hipResourceDesc* pResDe
 }
 
 #if CUDA_VERSION < CUDA_12000
+__HIP_DEPRECATED inline static hipError_t hipGetTextureReference(const textureReference** texref,
+                                                                 const void* symbol) {
+    return hipCUDAErrorTohipError(cudaGetTextureReference(texref, symbol));
+}
+
 __HIP_DEPRECATED inline static hipError_t hipGetTextureAlignmentOffset(
     size_t* offset, const struct textureReference* texref) {
     return hipCUDAErrorTohipError(cudaGetTextureAlignmentOffset(offset,texref));
