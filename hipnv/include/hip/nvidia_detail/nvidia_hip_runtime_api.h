@@ -3595,6 +3595,10 @@ inline static hipError_t hipTexObjectGetTextureDesc(HIP_TEXTURE_DESC* pTexDesc, 
     return hipCUResultTohipError(cuTexObjectGetTextureDesc(pTexDesc, (CUtexObject)texObject));
 }
 
+__HIP_DEPRECATED inline static hipError_t hipTexRefGetArray(hipArray_t* pArray, hipTexRef texRef) {
+    return hipCUResultTohipError(cuTexRefGetArray((CUarray*)pArray, texRef));
+}
+
 __HIP_DEPRECATED inline static hipError_t hipTexRefSetAddressMode(hipTexRef hTexRef, int dim, hipAddress_mode am){
     return hipCUResultTohipError(cuTexRefSetAddressMode(hTexRef,dim,am));
 }
