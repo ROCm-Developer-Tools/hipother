@@ -478,34 +478,32 @@ typedef struct HIP_RESOURCE_DESC_st
     unsigned int flags;                          /**< Flags (must be zero) */
 } HIP_RESOURCE_DESC;
 
-static inline CUDA_RESOURCE_DESC* hipResourceDesTocudaResourceDes(const HIP_RESOURCE_DESC* p){
-    CUDA_RESOURCE_DESC a;
+static inline void hipResourceDesTocudaResourceDes(CUDA_RESOURCE_DESC* a, const HIP_RESOURCE_DESC* p){
     switch (p->resType) {
         case HIP_RESOURCE_TYPE_ARRAY:
-            a.resType = CU_RESOURCE_TYPE_ARRAY;
+            a->resType = CU_RESOURCE_TYPE_ARRAY;
         case HIP_RESOURCE_TYPE_MIPMAPPED_ARRAY:
-            a.resType = CU_RESOURCE_TYPE_MIPMAPPED_ARRAY;
+            a->resType = CU_RESOURCE_TYPE_MIPMAPPED_ARRAY;
         case HIP_RESOURCE_TYPE_LINEAR:
-            a.resType = CU_RESOURCE_TYPE_LINEAR;
+            a->resType = CU_RESOURCE_TYPE_LINEAR;
         case HIP_RESOURCE_TYPE_PITCH2D:
-            a.resType = CU_RESOURCE_TYPE_PITCH2D;
+            a->resType = CU_RESOURCE_TYPE_PITCH2D;
         default:
-            a.resType = CU_RESOURCE_TYPE_ARRAY;
+            a->resType = CU_RESOURCE_TYPE_ARRAY;
     }
-    a.res.array.hArray = (CUarray)p->res.array.hArray;
-    a.res.mipmap.hMipmappedArray = (CUmipmappedArray)p->res.mipmap.hMipmappedArray;
-    a.res.linear.devPtr = p->res.linear.devPtr;
-    a.res.linear.format = p->res.linear.format;
-    a.res.linear.numChannels = p->res.linear.numChannels;
-    a.res.linear.sizeInBytes = p->res.linear.sizeInBytes;
-    a.res.pitch2D.devPtr = p->res.pitch2D.devPtr;
-    a.res.pitch2D.numChannels = p->res.pitch2D.numChannels;
-    a.res.pitch2D.format = p->res.pitch2D.format;
-    a.res.pitch2D.width = p->res.pitch2D.width;
-    a.res.pitch2D.height = p->res.pitch2D.height;
-    a.res.pitch2D.pitchInBytes = p->res.pitch2D.pitchInBytes;
-    a.flags = p->flags;
-    return &a;
+    a->res.array.hArray = (CUarray)p->res.array.hArray;
+    a->res.mipmap.hMipmappedArray = (CUmipmappedArray)p->res.mipmap.hMipmappedArray;
+    a->res.linear.devPtr = p->res.linear.devPtr;
+    a->res.linear.format = p->res.linear.format;
+    a->res.linear.numChannels = p->res.linear.numChannels;
+    a->res.linear.sizeInBytes = p->res.linear.sizeInBytes;
+    a->res.pitch2D.devPtr = p->res.pitch2D.devPtr;
+    a->res.pitch2D.numChannels = p->res.pitch2D.numChannels;
+    a->res.pitch2D.format = p->res.pitch2D.format;
+    a->res.pitch2D.width = p->res.pitch2D.width;
+    a->res.pitch2D.height = p->res.pitch2D.height;
+    a->res.pitch2D.pitchInBytes = p->res.pitch2D.pitchInBytes;
+    a->flags = p->flags;
 }
 
 typedef struct hip_Memcpy2D {
@@ -4217,6 +4215,40 @@ inline static hipError_t hipGraphUpload(hipGraphExec_t graphExec, hipStream_t st
     return hipCUDAErrorTohipError(cudaGraphUpload(graphExec, stream));
 }
 #endif
+inline static hipError_t hipMemcpyAtoD(hipDeviceptr_t dstDevice, hipArray_t srcArray,
+                                       size_t srcOffset, size_t ByteCount) {
+    return hipCUResultTohipError(cuMemcpyAtoD(dstDevice, (CUarray)srcArray, srcOffset, ByteCount));
+}
+inline static hipError_t hipMemcpyDtoA(hipArray_t dstArray, size_t dstOffset,
+                                       hipDeviceptr_t srcDevice, size_t ByteCount) {
+    return hipCUResultTohipError(cuMemcpyDtoA((CUarray)dstArray, dstOffset, srcDevice, ByteCount));
+}
+inline static hipError_t hipMemcpyAtoA(hipArray_t dstArray, size_t dstOffset, hipArray_t srcArray,
+                                       size_t srcOffset, size_t ByteCount) {
+    return hipCUResultTohipError(
+      cuMemcpyAtoA((CUarray)dstArray, dstOffset, (CUarray)srcArray, srcOffset, ByteCount));
+}
+inline static hipError_t hipMemcpyAtoHAsync(void* dstHost, hipArray_t srcArray, size_t srcOffset,
+                                            size_t ByteCount, hipStream_t stream) {
+    return hipCUResultTohipError(
+      cuMemcpyAtoHAsync(dstHost, (CUarray)srcArray, srcOffset, ByteCount, stream));
+}
+inline static hipError_t hipMemcpyHtoAAsync(hipArray_t dstArray, size_t dstOffset,
+                                            const void* srcHost, size_t ByteCount,
+                                            hipStream_t stream) {
+    return hipCUResultTohipError(
+      cuMemcpyHtoAAsync((CUarray)dstArray, dstOffset, srcHost, ByteCount, stream));
+}
+inline static hipError_t hipMemcpy2DArrayToArray(hipArray_t dst, size_t wOffsetDst,
+                                                 size_t hOffsetDst, hipArray_const_t src,
+                                                 size_t wOffsetSrc, size_t hOffsetSrc, size_t width,
+                                                 size_t height, hipMemcpyKind kind) {
+    return hipCUDAErrorTohipError(cudaMemcpy2DArrayToArray(
+      dst, wOffsetDst, hOffsetDst, src, wOffsetSrc, hOffsetSrc, width, height, kind));
+}
+inline static hipError_t hipSetValidDevices(int* device_arr, int len) {
+    return hipCUDAErrorTohipError(cudaSetValidDevices(device_arr, len));
+}
 #endif  //__CUDACC__
 
 #endif  // HIP_INCLUDE_HIP_NVIDIA_DETAIL_HIP_RUNTIME_API_H
