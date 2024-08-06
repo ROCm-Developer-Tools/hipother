@@ -190,11 +190,11 @@ inline static CUarray_format hipArray_FormatToCUarray_format(
 #define HIP_TR_ADDRESS_MODE_MIRROR CU_TR_ADDRESS_MODE_MIRROR
 #define HIP_TR_ADDRESS_MODE_BORDER CU_TR_ADDRESS_MODE_BORDER
 
-// hipAddress_mode
-#define hipAddress_mode CUaddress_mode
+// HIPAddress_mode
+#define HIPaddress_mode CUaddress_mode
 
 inline static CUaddress_mode hipAddress_modeToCUaddress_mode(
-    hipAddress_mode mode) {
+    HIPaddress_mode mode) {
     switch (mode) {
         case HIP_TR_ADDRESS_MODE_WRAP:
             return CU_TR_ADDRESS_MODE_WRAP;
@@ -3592,7 +3592,11 @@ __HIP_DEPRECATED inline static hipError_t hipTexRefGetArray(hipArray_t* pArray, 
     return hipCUResultTohipError(cuTexRefGetArray((CUarray*)pArray, texRef));
 }
 
-__HIP_DEPRECATED inline static hipError_t hipTexRefSetAddressMode(hipTexRef hTexRef, int dim, hipAddress_mode am){
+__HIP_DEPRECATED inline static hipError_t hipTexRefGetAddressMode(HIPaddress_mode *pam, hipTexRef hTexRef, int dim){
+    return hipCUResultTohipError(cuTexRefGetAddressMode(pam, hTexRef, dim));
+}
+
+__HIP_DEPRECATED inline static hipError_t hipTexRefSetAddressMode(hipTexRef hTexRef, int dim, HIPaddress_mode am){
     return hipCUResultTohipError(cuTexRefSetAddressMode(hTexRef,dim,am));
 }
 
