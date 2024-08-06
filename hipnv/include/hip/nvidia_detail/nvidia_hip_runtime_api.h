@@ -3604,6 +3604,14 @@ __HIP_DEPRECATED inline static hipError_t hipTexRefSetFilterMode(hipTexRef hTexR
     return hipCUResultTohipError(cuTexRefSetFilterMode(hTexRef,fm));
 }
 
+__HIP_DEPRECATED inline static hipError_t hipTexRefGetBorderColor(float* pBorderColor, hipTexRef hTexRef){
+    return hipCUResultTohipError(cuTexRefGetBorderColor(pBorderColor, hTexRef));
+}
+
+__HIP_DEPRECATED inline static hipError_t hipTexRefSetBorderColor(hipTexRef hTexRef, float* pBorderColor){
+    return hipCUResultTohipError(cuTexRefSetBorderColor(hTexRef, pBorderColor));
+}
+
 inline static hipError_t hipTexRefGetAddress(hipDeviceptr_t* dev_ptr, hipTexRef texRef) {
     return hipCUResultTohipError(cuTexRefGetAddress(dev_ptr, texRef));
 }
