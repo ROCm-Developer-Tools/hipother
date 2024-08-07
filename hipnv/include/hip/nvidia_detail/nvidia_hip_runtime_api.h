@@ -3616,6 +3616,10 @@ inline static hipError_t hipTexRefSetAddress2D(hipTexRef hTexRef, const CUDA_ARR
     return hipCUResultTohipError(cuTexRefSetAddress2D(hTexRef,desc,dptr,Pitch));
 }
 
+__HIP_DEPRECATED inline static hipError_t hipTexRefGetFormat(hipArray_Format *fmt, int *NumPackedComponents, hipTexRef hTexRef){
+    return hipCUResultTohipError(cuTexRefGetFormat(fmt, NumPackedComponents, hTexRef));
+}
+
 __HIP_DEPRECATED inline static hipError_t hipTexRefSetFormat(hipTexRef hTexRef, hipArray_Format fmt, int NumPackedComponents){
     return hipCUResultTohipError(cuTexRefSetFormat(hTexRef,fmt,NumPackedComponents));
 }
