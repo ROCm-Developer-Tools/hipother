@@ -3632,6 +3632,10 @@ __HIP_DEPRECATED inline static hipError_t hipTexRefSetFormat(hipTexRef hTexRef, 
     return hipCUResultTohipError(cuTexRefSetFormat(hTexRef,fmt,NumPackedComponents));
 }
 
+__HIP_DEPRECATED inline static hipError_t hipTexRefGetFlags(unsigned int *pFlags, hipTexRef hTexRef){
+    return hipCUResultTohipError(cuTexRefGetFlags(pFlags, hTexRef));
+}
+
 __HIP_DEPRECATED inline static hipError_t hipTexRefSetFlags(hipTexRef hTexRef, unsigned int Flags){
     return hipCUResultTohipError(cuTexRefSetFlags(hTexRef,Flags));
 }
