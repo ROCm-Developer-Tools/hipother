@@ -3644,6 +3644,14 @@ __HIP_DEPRECATED inline static hipError_t hipTexRefSetArray(hipTexRef hTexRef, h
     return hipCUResultTohipError(cuTexRefSetArray(hTexRef,(CUarray)hArray,Flags));
 }
 
+__HIP_DEPRECATED inline static hipError_t hipTexRefGetMaxAnisotropy(int* pmaxAniso, hipTexRef hTexRef) {
+    return hipCUResultTohipError(cuTexRefGetMaxAnisotropy(pmaxAniso, hTexRef));
+}
+
+__HIP_DEPRECATED inline static hipError_t hipTexRefSetMaxAnisotropy(hipTexRef hTexRef, unsigned int maxAniso) {
+    return hipCUResultTohipError(cuTexRefSetMaxAnisotropy(hTexRef, maxAniso));
+}
+
 inline static hipError_t hipArrayCreate(hipArray_t* pHandle, const HIP_ARRAY_DESCRIPTOR* pAllocateArray){
     return hipCUResultTohipError(cuArrayCreate((CUarray*)pHandle, pAllocateArray));
 }
