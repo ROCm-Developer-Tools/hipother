@@ -3252,7 +3252,7 @@ inline static hipError_t hipGetTextureObjectResourceDesc(hipResourceDesc* pResDe
 }
 
 #if CUDA_VERSION < CUDA_12000
-__HIP_DEPRECATED inline static hipError_t hipGetTextureReference(const textureReference** texref,
+__HIP_DEPRECATED inline static hipError_t hipGetTextureReference(const struct textureReference** texref,
                                                                  const void* symbol) {
     return hipCUDAErrorTohipError(cudaGetTextureReference(texref, symbol));
 }
