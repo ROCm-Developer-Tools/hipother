@@ -369,6 +369,11 @@ typedef enum cudaResourceViewFormat hipResourceViewFormat;
 #define hipHostMallocCoherent 0x0
 #define hipHostMallocNonCoherent 0x0
 
+#define hipHostAllocDefault cudaHostAllocDefault
+#define hipHostAllocPortable cudaHostAllocPortable
+#define hipHostAllocMapped cudaHostAllocMapped
+#define hipHostAllocWriteCombined cudaHostAllocWriteCombined
+
 #define hipMemAttachGlobal cudaMemAttachGlobal
 #define hipMemAttachHost cudaMemAttachHost
 #define hipMemAttachSingle cudaMemAttachSingle
@@ -1739,7 +1744,6 @@ inline static hipError_t hipMemAllocHost(void** ptr, size_t size) {
     return hipCUResultTohipError(cuMemAllocHost(ptr, size));
 }
 
-__HIP_DEPRECATED_MSG("use hipHostMalloc instead")
 inline static hipError_t hipHostAlloc(void** ptr, size_t size, unsigned int flags) {
     return hipCUDAErrorTohipError(cudaHostAlloc(ptr, size, flags));
 }
@@ -1847,7 +1851,6 @@ inline static hipError_t hipHostUnregister(void* ptr) {
     return hipCUDAErrorTohipError(cudaHostUnregister(ptr));
 }
 
-__HIP_DEPRECATED_MSG("use hipHostFree instead")
 inline static hipError_t hipFreeHost(void* ptr) {
     return hipCUDAErrorTohipError(cudaFreeHost(ptr));
 }
