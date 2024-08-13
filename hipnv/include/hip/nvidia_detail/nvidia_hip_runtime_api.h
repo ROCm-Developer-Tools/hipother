@@ -255,6 +255,9 @@ inline static CUresourcetype hipResourcetype_enumToCUresourcetype(
 // hipStreamPerThread
 #define hipStreamPerThread ((cudaStream_t)2)
 
+// hipStreamLegacy
+#define hipStreamLegacy ((cudaStream_t)1)
+
 #define hipTexRef CUtexref
 typedef CUmipmappedArray hipmipmappedArray;
 typedef cudaMipmappedArray_t hipMipmappedArray_t;
