@@ -12,7 +12,7 @@ resources:
   - repository: hipother_repo
     type: github
     endpoint: ROCm
-    name: ROCm/hip # leverage HIP job that builds both AMD and NV backends
+    name: ROCm/HIP # leverage HIP job that builds both AMD and NV backends
     ref: amd-staging
 
 variables:
