@@ -39,6 +39,7 @@ THE SOFTWARE.
 #define CUDA_11040 11040
 #define CUDA_11060 11060
 #define CUDA_12000 12000
+#define CUDA_12020 12020
 #define CUDA_12030 12030
 
 #ifdef __cplusplus
@@ -1513,6 +1514,8 @@ typedef enum cudaExternalSemaphoreHandleType hipExternalSemaphoreHandleType;
 typedef struct cudaExternalSemaphoreHandleDesc hipExternalSemaphoreHandleDesc;
 typedef cudaExternalSemaphore_t hipExternalSemaphore_t;
 typedef struct cudaExternalSemaphoreSignalParams hipExternalSemaphoreSignalParams;
+typedef struct cudaExternalSemaphoreSignalNodeParams hipExternalSemaphoreSignalNodeParams;
+typedef struct cudaExternalSemaphoreWaitNodeParams hipExternalSemaphoreWaitNodeParams;
 typedef struct cudaExternalSemaphoreWaitParams hipExternalSemaphoreWaitParams;
 
 typedef struct cudaGraphicsResource hipGraphicsResource;
@@ -1556,6 +1559,9 @@ typedef cudaHostFn_t hipHostFn_t;
 typedef struct cudaHostNodeParams hipHostNodeParams;
 typedef struct cudaKernelNodeParams hipKernelNodeParams;
 typedef struct cudaMemsetParams hipMemsetParams;
+#if CUDA_VERSION >= CUDA_12020
+typedef struct cudaGraphNodeParams hipGraphNodeParams;
+#endif
 
 #if CUDA_VERSION >= CUDA_11040
 typedef struct cudaMemAllocNodeParams hipMemAllocNodeParams;
@@ -3736,6 +3742,10 @@ inline static hipError_t hipGraphInstantiateWithParams(hipGraphExec_t* pGraphExe
     return hipCUDAErrorTohipError(cudaGraphInstantiateWithParams(pGraphExec, graph,
                                                                  instantiateParams));
 }
+
+inline static hipError_t hipGraphExecGetFlags(hipGraphExec_t graphExec, unsigned long long* flags) {
+    return hipCUDAErrorTohipError(cudaGraphExecGetFlags(graphExec, flags));
+}
 #endif
 
 #if CUDA_VERSION >= CUDA_11040
@@ -4151,6 +4161,74 @@ inline static hipError_t hipGraphHostNodeGetParams(hipGraphNode_t node,
                                                    hipHostNodeParams* pNodeParams) {
     return hipCUDAErrorTohipError(cudaGraphHostNodeGetParams(node, pNodeParams));
 }
+
+inline static hipError_t hipGraphExecExternalSemaphoresSignalNodeSetParams(
+    hipGraphExec_t hGraphExec, hipGraphNode_t hNode,
+    const hipExternalSemaphoreSignalNodeParams* nodeParams) {
+    return hipCUDAErrorTohipError(
+        cudaGraphExecExternalSemaphoresSignalNodeSetParams(hGraphExec, hNode, nodeParams));
+}
+
+inline static hipError_t hipGraphExecExternalSemaphoresWaitNodeSetParams(
+    hipGraphExec_t hGraphExec, hipGraphNode_t hNode,
+    const hipExternalSemaphoreWaitNodeParams* nodeParams) {
+    return hipCUDAErrorTohipError(
+        cudaGraphExecExternalSemaphoresWaitNodeSetParams(hGraphExec, hNode, nodeParams));
+}
+
+inline static hipError_t hipGraphAddExternalSemaphoresSignalNode(
+    hipGraphNode_t* pGraphNode, hipGraph_t graph, const hipGraphNode_t* pDependencies,
+    size_t numDependencies, const hipExternalSemaphoreSignalNodeParams* nodeParams) {
+    return hipCUDAErrorTohipError(cudaGraphAddExternalSemaphoresSignalNode(
+        pGraphNode, graph, pDependencies, numDependencies, nodeParams));
+}
+
+inline static hipError_t hipGraphAddExternalSemaphoresWaitNode(
+    hipGraphNode_t* pGraphNode, hipGraph_t graph, const hipGraphNode_t* pDependencies,
+    size_t numDependencies, const hipExternalSemaphoreWaitNodeParams* nodeParams) {
+    return hipCUDAErrorTohipError(cudaGraphAddExternalSemaphoresWaitNode(
+        pGraphNode, graph, pDependencies, numDependencies, nodeParams));
+}
+
+inline static hipError_t hipGraphExternalSemaphoresSignalNodeSetParams(
+    hipGraphNode_t hNode, const hipExternalSemaphoreSignalNodeParams* nodeParams) {
+    return hipCUDAErrorTohipError(
+        cudaGraphExternalSemaphoresSignalNodeSetParams(hNode, nodeParams));
+}
+
+inline static hipError_t hipGraphExternalSemaphoresWaitNodeGetParams(
+    hipGraphNode_t hNode, hipExternalSemaphoreWaitNodeParams* paramsOut) {
+    return hipCUDAErrorTohipError(cudaGraphExternalSemaphoresWaitNodeGetParams(hNode, paramsOut));
+}
+
+inline static hipError_t hipGraphExternalSemaphoresWaitNodeSetParams(
+    hipGraphNode_t hNode, const hipExternalSemaphoreWaitNodeParams* nodeParams) {
+    return hipCUDAErrorTohipError(cudaGraphExternalSemaphoresWaitNodeSetParams(hNode, nodeParams));
+}
+
+inline static hipError_t hipGraphExternalSemaphoresSignalNodeGetParams(
+    hipGraphNode_t hNode, hipExternalSemaphoreSignalNodeParams* paramsOut) {
+    return hipCUDAErrorTohipError(cudaGraphExternalSemaphoresSignalNodeGetParams(hNode, paramsOut));
+}
+
+#if CUDA_VERSION >= CUDA_12020
+inline static hipError_t hipGraphAddNode(hipGraphNode_t* pGraphNode, hipGraph_t graph,
+                                         const hipGraphNode_t* pDependencies,
+                                         size_t numDependencies, hipGraphNodeParams* nodeParams) {
+    return hipCUDAErrorTohipError(
+        cudaGraphAddNode(pGraphNode, graph, pDependencies, numDependencies, nodeParams));
+}
+
+inline static hipError_t hipGraphExecNodeSetParams(hipGraphExec_t graphExec, hipGraphNode_t node,
+                                                   hipGraphNodeParams* nodeParams) {
+    return hipCUDAErrorTohipError(cudaGraphExecNodeSetParams(graphExec, node, nodeParams));
+}
+
+inline static hipError_t hipGraphNodeSetParams(hipGraphNode_t node,
+                                               hipGraphNodeParams* nodeParams) {
+    return hipCUDAErrorTohipError(cudaGraphNodeSetParams(node, nodeParams));
+}
+#endif
 
 #if CUDA_VERSION >= CUDA_11010
 inline static hipError_t hipGraphMemcpyNodeSetParams1D(hipGraphNode_t node, void* dst,
