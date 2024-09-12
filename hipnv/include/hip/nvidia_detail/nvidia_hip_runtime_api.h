@@ -519,6 +519,146 @@ static inline void hipResourceDesTocudaResourceDes(CUDA_RESOURCE_DESC* a, const 
     a->flags = p->flags;
 }
 
+
+/** Operations for hipStreamBatchMemOp*/
+typedef enum hipStreamBatchMemOpType {
+    hipStreamMemOpWaitValue32 = 0x1,
+    hipStreamMemOpWriteValue32 = 0x2,
+    hipStreamMemOpWaitValue64 = 0x4,
+    hipStreamMemOpWriteValue64 = 0x5,
+    hipStreamMemOpBarrier = 0x6,            ///< Currently not supported
+    hipStreamMemOpFlushRemoteWrites = 0x3   ///< Currently not supported
+} hipStreamBatchMemOpType;
+
+
+
+inline static CUstreamBatchMemOpType hipStreamBatchMemOpType_enumToCUstreamBatchMemOpType(
+                                     hipStreamBatchMemOpType memOpType) {
+    switch (memOpType) {
+        case hipStreamMemOpWaitValue32:
+            return CU_STREAM_MEM_OP_WAIT_VALUE_32;
+        case hipStreamMemOpWriteValue32:
+            return CU_STREAM_MEM_OP_WRITE_VALUE_32;
+        case hipStreamMemOpWaitValue64:
+            return CU_STREAM_MEM_OP_WAIT_VALUE_64;
+        case hipStreamMemOpWriteValue64:
+            return CU_STREAM_MEM_OP_WRITE_VALUE_64;
+        case hipStreamMemOpBarrier:
+            return CU_STREAM_MEM_OP_BARRIER;
+        case hipStreamMemOpFlushRemoteWrites:
+            return CU_STREAM_MEM_OP_FLUSH_REMOTE_WRITES;
+        default:
+            return CU_STREAM_MEM_OP_WAIT_VALUE_32;
+    }
+}
+
+typedef union hipStreamBatchMemOpParams_union {
+    hipStreamBatchMemOpType operation;
+    struct hipStreamMemOpWaitValueParams_t{
+        hipStreamBatchMemOpType operation;
+        hipDeviceptr_t address;
+    union {
+        uint32_t value;
+        uint64_t value64;
+    };
+    unsigned int flags;
+    hipDeviceptr_t alias;   ///< Not valid for AMD backend. Initial value is unimportant
+  } waitValue;
+  struct hipStreamMemOpWriteValueParams_t{
+      hipStreamBatchMemOpType operation;
+      hipDeviceptr_t address;
+      union {
+          uint32_t value;
+          uint64_t value64;
+      };
+      unsigned int flags;
+      hipDeviceptr_t alias;   ///< Not valid for AMD backend. Initial value is unimportant
+    } writeValue;
+    struct hipStreamMemOpFlushRemoteWritesParams_t{
+        hipStreamBatchMemOpType operation;
+        unsigned int flags;
+    } flushRemoteWrites;    ///< Currently not supported on AMD
+    struct hipStreamMemOpMemoryBarrierParams_t{
+        hipStreamBatchMemOpType operation;
+        unsigned int flags;
+    } memoryBarrier;        ///< Currently not supported on AMD
+    uint64_t pad[6];
+} hipStreamBatchMemOpParams;
+// hipStreamBatchMemOpType
+
+typedef struct hipBatchMemOpNodeParams {
+    hipCtx_t ctx;
+    unsigned int count;
+    hipStreamBatchMemOpParams* paramArray;
+    unsigned int flags;
+} hipBatchMemOpNodeParams;
+
+#define hipStreamBatchMemOpType CUstreamBatchMemOpType
+
+static inline void hipBatchMemOpParamsTocudaBatchMemOpParams(CUstreamBatchMemOpParams* a,
+                                                             const hipStreamBatchMemOpParams* p,
+                                                             unsigned int count) {
+    for (unsigned int i = 0; i < count; i++) {
+        switch (p[i].operation) {
+            case hipStreamMemOpWaitValue32:
+                a[i].operation = CU_STREAM_MEM_OP_WAIT_VALUE_32;
+            break;
+            case hipStreamMemOpWriteValue32:
+                a[i].operation = CU_STREAM_MEM_OP_WRITE_VALUE_32;
+            break;
+            case hipStreamMemOpWaitValue64:
+                a[i].operation = CU_STREAM_MEM_OP_WAIT_VALUE_64;
+            break;
+            case hipStreamMemOpWriteValue64:
+                a[i].operation = CU_STREAM_MEM_OP_WRITE_VALUE_64;
+            break;
+            case hipStreamMemOpBarrier:
+                a[i].operation = CU_STREAM_MEM_OP_BARRIER;
+            break;
+            case hipStreamMemOpFlushRemoteWrites:
+                a[i].operation = CU_STREAM_MEM_OP_FLUSH_REMOTE_WRITES;
+            break;
+            default:
+                a[i].operation = CU_STREAM_MEM_OP_WAIT_VALUE_32;
+            break;
+        }
+    a[i].waitValue.operation = hipStreamBatchMemOpType_enumToCUstreamBatchMemOpType(
+                                                           p[i].waitValue.operation);
+    a[i].waitValue.address = p[i].waitValue.address;
+    a[i].waitValue.value = static_cast<cuuint32_t>(p[i].waitValue.value);
+    a[i].waitValue.value64 = static_cast<cuuint64_t>(p[i].waitValue.value64);
+    a[i].waitValue.flags = p[i].waitValue.flags;
+    a[i].waitValue.alias = (CUdeviceptr)p[i].waitValue.alias;
+
+    a[i].writeValue.operation = hipStreamBatchMemOpType_enumToCUstreamBatchMemOpType(
+                                                            p[i].waitValue.operation);
+    a[i].writeValue.address = p[i].writeValue.address;
+    a[i].writeValue.value = static_cast<cuuint32_t>(p[i].writeValue.value);
+    a[i].writeValue.value64 = static_cast<cuuint64_t>(p[i].writeValue.value64);
+    a[i].writeValue.flags = p[i].writeValue.flags;
+    a[i].writeValue.alias = (CUdeviceptr)p[i].writeValue.alias;
+
+    a[i].flushRemoteWrites.operation = hipStreamBatchMemOpType_enumToCUstreamBatchMemOpType(
+                                                           p[i].flushRemoteWrites.operation);
+    a[i].flushRemoteWrites.flags = p[i].flushRemoteWrites.flags;
+
+    a[i].memoryBarrier.operation = hipStreamBatchMemOpType_enumToCUstreamBatchMemOpType(
+                                                           p[i].memoryBarrier.operation);
+    a[i].memoryBarrier.flags = p[i].memoryBarrier.flags;
+  }
+}
+
+static inline void hipBatchMemOpNodeParamsTocudaBatchMemOpNodeParams(
+                   CUDA_BATCH_MEM_OP_NODE_PARAMS* a,
+                   const hipBatchMemOpNodeParams* p) {
+    CUstreamBatchMemOpParams cuParamArray[p->count];
+    hipBatchMemOpParamsTocudaBatchMemOpParams(cuParamArray, p->paramArray, p->count);
+    a->ctx = (CUcontext)p->ctx;
+    a->count = p->count;
+    a->paramArray = cuParamArray;
+    a->flags = p->flags;
+}
+
 typedef struct hip_Memcpy2D {
     size_t srcXInBytes;
     size_t srcY;
@@ -4015,6 +4155,44 @@ inline static hipError_t hipStreamWaitValue64(hipStream_t stream, void* ptr, int
     return hipCUResultTohipError(cuStreamWaitValue64(stream, reinterpret_cast<CUdeviceptr>(ptr),
                                                      static_cast<cuuint64_t>(value), flags));
 }
+
+inline static hipError_t hipStreamBatchMemOp(hipStream_t stream, unsigned int count,
+                                             hipStreamBatchMemOpParams* paramArray,
+                                             unsigned int flags) {
+    CUstreamBatchMemOpParams cuParamArray[count];
+    hipBatchMemOpParamsTocudaBatchMemOpParams(cuParamArray, paramArray, count);
+    return hipCUResultTohipError(cuStreamBatchMemOp(stream, count, cuParamArray, flags));
+}
+
+inline static hipError_t hipGraphAddBatchMemOpNode(hipGraphNode_t *phGraphNode, hipGraph_t hGraph,
+                                                   const hipGraphNode_t *dependencies,
+                                                   size_t numDependencies,
+                                                   const hipBatchMemOpNodeParams* nodeParams) {
+    CUDA_BATCH_MEM_OP_NODE_PARAMS cuBatchMemOpNodeParams;
+    hipBatchMemOpNodeParamsTocudaBatchMemOpNodeParams(&cuBatchMemOpNodeParams, nodeParams);
+    return hipCUDAErrorTohipError(cuGraphAddBatchMemOpNode(phGraphNode, hGraph, dependencies,
+                                  numDependencies,
+                                  (const CUDA_BATCH_MEM_OP_NODE_PARAMS*)&cuBatchMemOpNodeParams));
+}
+
+inline static hipError_t hipGraphBatchMemOpNodeGetParams(hipGraphNode_t hNode,
+                                                         hipBatchMemOpNodeParams* nodeParams_out) {
+    return hipCUDAErrorTohipError(cuGraphBatchMemOpNodeGetParams(hNode, nodeParams_out));
+}
+
+inline static hipError_t hipGraphBatchMemOpNodeSetParams(hipGraphNode_t hNode,
+                                                         hipBatchMemOpNodeParams* nodeParams) {
+    return hipCUDAErrorTohipError(cuGraphBatchMemOpNodeSetParams (hNode,
+                                            (const CUDA_BATCH_MEM_OP_NODE_PARAMS*)nodeParams));
+}
+
+inline static hipError_t hipGraphExecBatchMemOpNodeSetParams(hipGraphExec_t hGraphExec,
+                                                    hipGraphNode_t hNode,
+                                                    const hipBatchMemOpNodeParams* nodeParams) {
+    return hipCUDAErrorTohipError(cuGraphExecBatchMemOpNodeSetParams(hGraphExec, hNode,
+                                                (const CUDA_BATCH_MEM_OP_NODE_PARAMS*)nodeParams));
+}
+
 
 inline static hipError_t hipGraphRemoveDependencies(hipGraph_t graph, const hipGraphNode_t* from,
                                                     const hipGraphNode_t* to,
