@@ -3956,14 +3956,6 @@ inline static hipError_t hipGraphNodeGetDependentNodes(hipGraphNode_t node,
     return hipCUDAErrorTohipError(
         cudaGraphNodeGetDependentNodes(node, pDependentNodes, pNumDependentNodes));
 }
-inline static hipError_t hipGraphNodeGetDependentNodes_v2(hipGraphNode_t node,
-                                                          hipGraphNode_t* pDependentNodes,
-                                                          hipGraphEdgeData* edgeData,
-                                                          size_t* pNumDependentNodes) {
-    return hipCUDAErrorTohipError(
-        cudaGraphNodeGetDependentNodes_v2(node, pDependentNodes, edgeData, pNumDependentNodes));
-}
-
 
 inline static hipError_t hipGraphNodeGetType(hipGraphNode_t node, hipGraphNodeType* pType) {
     return hipCUDAErrorTohipError(cudaGraphNodeGetType(node, pType));
