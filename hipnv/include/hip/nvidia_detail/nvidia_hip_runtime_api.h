@@ -3711,6 +3711,14 @@ inline static hipError_t hipStreamBeginCaptureToGraph(hipStream_t stream, hipGra
     return hipCUDAErrorTohipError(cudaStreamBeginCaptureToGraph(
         stream, graph, dependencies, dependencyData, numDependencies, mode));
 }
+
+inline static hipError_t hipGraphNodeGetDependentNodes_v2(hipGraphNode_t node,
+                                                          hipGraphNode_t* pDependentNodes,
+                                                          hipGraphEdgeData* edgeData,
+                                                          size_t* pNumDependentNodes) {
+    return hipCUDAErrorTohipError(
+        cudaGraphNodeGetDependentNodes_v2(node, pDependentNodes, edgeData, pNumDependentNodes));
+}
 #endif
 inline static hipError_t hipStreamEndCapture(hipStream_t stream, hipGraph_t* pGraph) {
     return hipCUDAErrorTohipError(cudaStreamEndCapture(stream, pGraph));
