@@ -366,6 +366,9 @@ typedef enum cudaResourceViewFormat hipResourceViewFormat;
 #define hipEventReleaseToDevice 0 /* no-op on CUDA platform */
 #define hipEventReleaseToSystem 0 /* no-op on CUDA platform */
 
+//! Flags that can be used with hipEventRecordWithFlags.
+#define hipEventRecordDefault cudaEventRecordDefault
+#define hipEventRecordExternal cudaEventRecordExternal
 
 #define hipHostMallocDefault cudaHostAllocDefault
 #define hipHostMallocPortable cudaHostAllocPortable
@@ -2924,6 +2927,11 @@ inline static hipError_t hipEventCreate(hipEvent_t* event) {
 
 inline static hipError_t hipEventRecord(hipEvent_t event, hipStream_t stream __dparm(NULL)) {
     return hipCUDAErrorTohipError(cudaEventRecord(event, stream));
+}
+
+inline static hipError_t hipEventRecordWithFlags(hipEvent_t event, hipStream_t stream __dparm(0),
+                                                 unsigned int flags __dparm(0))
+    return hipCUDAErrorTohipError(cudaEventRecordWithFlags(event, stream, flags));
 }
 
 inline static hipError_t hipEventSynchronize(hipEvent_t event) {
