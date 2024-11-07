@@ -31,6 +31,7 @@ THE SOFTWARE.
 #include <stdio.h>
 
 #define CUDA_9000 9000
+#define CUDA_10000 10000
 #define CUDA_10010 10010
 #define CUDA_10020 10020
 #define CUDA_11010 11010
@@ -610,6 +611,56 @@ static inline void hipMemcpy3DTocudaMemcpy3D(CUDA_MEMCPY3D* a, const HIP_MEMCPY3
     a->WidthInBytes = (size_t)p->WidthInBytes;
     a->Height = (size_t)p->Height;
     a->Depth = (size_t)p->Depth;
+}
+
+static inline void cudaMemcpy3DToHipMemcpy3D(HIP_MEMCPY3D* a, const CUDA_MEMCPY3D* p) {
+    a->srcXInBytes = (unsigned int)p->srcXInBytes;
+    a->srcY = (unsigned int)p->srcY;
+    a->srcZ = (unsigned int)p->srcZ;
+    a->srcLOD = (unsigned int)p->srcLOD;
+    switch (p->srcMemoryType) {
+        case CU_MEMORYTYPE_HOST:
+            a->srcMemoryType = hipMemoryTypeHost;
+            break;
+        case CU_MEMORYTYPE_DEVICE:
+            a->srcMemoryType = hipMemoryTypeDevice;
+            break;
+        case CU_MEMORYTYPE_ARRAY:
+            a->srcMemoryType = hipMemoryTypeArray;
+            break;
+        default:
+            a->srcMemoryType = hipMemoryTypeUnified;
+    }
+    a->srcHost = p->srcHost;
+    a->srcDevice =(hipDeviceptr_t)p->srcDevice;
+    a->srcArray = (hipArray_t)p->srcArray;
+    a->srcPitch = (unsigned int)p->srcPitch;
+    a->srcHeight = (unsigned int)p->srcHeight;
+    a->dstXInBytes = (unsigned int)p->dstXInBytes;
+    a->dstY = (unsigned int)p->dstY;
+    a->dstZ = (unsigned int)p->dstZ;
+    a->dstLOD = (unsigned int)p->dstLOD;
+    switch (p->dstMemoryType) {
+        case CU_MEMORYTYPE_HOST:
+            a->dstMemoryType = hipMemoryTypeHost;
+            break;
+        case CU_MEMORYTYPE_DEVICE:
+            a->dstMemoryType = hipMemoryTypeDevice;
+            break;
+        case CU_MEMORYTYPE_ARRAY:
+            a->dstMemoryType = hipMemoryTypeArray;
+            break;
+        default:
+            a->dstMemoryType = hipMemoryTypeUnified;
+    }
+    a->dstHost = p->dstHost;
+    a->dstDevice = (hipDeviceptr_t)p->dstDevice;
+    a->dstArray = (hipArray_t)p->dstArray;
+    a->dstPitch = (unsigned int)p->dstPitch;
+    a->dstHeight = (unsigned int)p->dstHeight;
+    a->WidthInBytes = (unsigned int)p->WidthInBytes;
+    a->Height = (unsigned int)p->Height;
+    a->Depth = (unsigned int)p->Depth;
 }
 
 static inline void hipMemcpy2DTocudaMemcpy2D(CUDA_MEMCPY2D* a, const hip_Memcpy2D* p){
@@ -4343,6 +4394,65 @@ inline static hipError_t hipDrvGraphAddMemcpyNode(hipGraphNode_t* phGraphNode, h
                                     numDependencies, (const CUDA_MEMCPY3D*)&cudaCopy, ctx)));
     }
 }
+
+#if CUDA_VERSION >= CUDA_10000
+inline static hipError_t hipDrvGraphMemcpyNodeGetParams(hipGraphNode_t hNode,
+                                                        HIP_MEMCPY3D* nodeParams) {
+  if (nodeParams == nullptr) {
+    return hipCUResultTohipError(cuGraphMemcpyNodeGetParams(hNode, nullptr));
+  } else {
+    CUDA_MEMCPY3D cudaCopy = {0};
+    hipError_t err =
+        hipCUResultTohipError(cuGraphMemcpyNodeGetParams(hNode, (CUDA_MEMCPY3D*)&cudaCopy));
+    cudaMemcpy3DToHipMemcpy3D(nodeParams, &cudaCopy);
+    return err;
+  }
+}
+
+inline static hipError_t hipDrvGraphMemcpyNodeSetParams(hipGraphNode_t hNode,
+                                                        HIP_MEMCPY3D* nodeParams) {
+  if (nodeParams == nullptr) {
+    return hipCUResultTohipError(cuGraphMemcpyNodeSetParams(hNode, nullptr));
+  } else {
+    CUDA_MEMCPY3D cudaCopy = {0};
+    hipMemcpy3DTocudaMemcpy3D(&cudaCopy, nodeParams);
+    return hipCUResultTohipError(cuGraphMemcpyNodeSetParams(hNode, (CUDA_MEMCPY3D*)&cudaCopy));
+  }
+}
+#endif
+
+#if CUDA_VERSION >= CUDA_10020
+inline static hipError_t hipDrvGraphExecMemcpyNodeSetParams(hipGraphExec_t hGraphExec,
+                                                            hipGraphNode_t hNode,
+                                                            const HIP_MEMCPY3D* copyParams,
+                                                            hipCtx_t ctx) {
+  if (copyParams == nullptr) {
+    return hipCUResultTohipError(cuGraphExecMemcpyNodeSetParams(hGraphExec, hNode, nullptr, ctx));
+  } else {
+    CUDA_MEMCPY3D cudaCopy = {0};
+    hipMemcpy3DTocudaMemcpy3D(&cudaCopy, copyParams);
+    return hipCUResultTohipError(
+        cuGraphExecMemcpyNodeSetParams(hGraphExec, hNode, (CUDA_MEMCPY3D*)&cudaCopy, ctx));
+  }
+}
+
+inline static hipError_t hipDrvGraphExecMemsetNodeSetParams(
+    hipGraphExec_t hGraphExec, hipGraphNode_t hNode, const HIP_MEMSET_NODE_PARAMS* memsetParams,
+    hipCtx_t ctx) {
+  return hipCUResultTohipError(
+      cuGraphExecMemsetNodeSetParams(hGraphExec, hNode, memsetParams, ctx));
+}
+#endif
+
+#if CUDA_VERSION >= CUDA_11040
+inline static hipError_t hipDrvGraphAddMemFreeNode(hipGraphNode_t* phGraphNode, hipGraph_t hGraph,
+                                                   const hipGraphNode_t* dependencies,
+                                                   size_t numDependencies, hipDeviceptr_t dptr) {
+  return hipCUResultTohipError(
+      cuGraphAddMemFreeNode(phGraphNode, hGraph, dependencies, numDependencies, dptr));
+}
+#endif
+
 #endif
 #if CUDA_VERSION >= CUDA_11010
 inline static hipError_t hipGraphUpload(hipGraphExec_t graphExec, hipStream_t stream) {
