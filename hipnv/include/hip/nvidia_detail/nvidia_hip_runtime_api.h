@@ -1729,7 +1729,7 @@ typedef struct hipMemAllocationProp {
     /** Memory allocation type */
     hipMemAllocationType type;
     /** Requested handle type */
-    hipMemAllocationHandleType requestedHandleTypes;
+    hipMemAllocationHandleType requestedHandleType;
     /** Location of allocation */
     hipMemLocation location;
     /**
@@ -2690,7 +2690,7 @@ inline static hipError_t hipDeviceGetAttribute(int* pi, hipDeviceAttribute_t att
 inline static CUmemAllocationProp hipMemAllocationPropToCUmemAllocationProp(const hipMemAllocationProp* prop) {
     CUmemAllocationProp cuProp;
     cuProp.type = (CUmemAllocationType)prop->type;
-    cuProp.requestedHandleTypes = (CUmemAllocationHandleType)prop->requestedHandleTypes;
+    cuProp.requestedHandleTypes = (CUmemAllocationHandleType)prop->requestedHandleType;
     cuProp.location.type = (CUmemLocationType)prop->location.type;
     cuProp.location.id = prop->location.id;
     cuProp.win32HandleMetaData = prop->win32HandleMetaData;
@@ -2702,6 +2702,22 @@ inline static CUmemAllocationProp hipMemAllocationPropToCUmemAllocationProp(cons
     cuProp.allocFlags.reserved[2] = prop->allocFlags.reserved[2];
     cuProp.allocFlags.reserved[3] = prop->allocFlags.reserved[3];
     return cuProp;
+}
+inline static hipMemAllocationProp CUmemAllocationPropToHipMemAllocationProp(const CUmemAllocationProp* prop) {
+  hipMemAllocationProp hipProp;
+  hipProp.type = (hipMemAllocationType)prop->type;
+  hipProp.requestedHandleType = (hipMemAllocationHandleType)prop->requestedHandleTypes;
+  hipProp.location.type = (hipMemLocationType)prop->location.type;
+  hipProp.location.id = prop->location.id;
+  hipProp.win32HandleMetaData = prop->win32HandleMetaData;
+  hipProp.allocFlags.compressionType = prop->allocFlags.compressionType;
+  hipProp.allocFlags.gpuDirectRDMACapable = prop->allocFlags.gpuDirectRDMACapable;
+  hipProp.allocFlags.usage = prop->allocFlags.usage;
+  hipProp.allocFlags.reserved[0] = prop->allocFlags.reserved[0];
+  hipProp.allocFlags.reserved[1] = prop->allocFlags.reserved[1];
+  hipProp.allocFlags.reserved[2] = prop->allocFlags.reserved[2];
+  hipProp.allocFlags.reserved[3] = prop->allocFlags.reserved[3];
+  return hipProp;
 }
 inline static CUmemLocation hipMemLocationToCUmemLocation(const hipMemLocation* loc) {
     CUmemLocation cuLoc;
@@ -2756,8 +2772,10 @@ inline static hipError_t hipMemGetAccess(unsigned long long* flags,
 }
 inline static hipError_t hipMemGetAllocationPropertiesFromHandle(hipMemAllocationProp* prop,
                                                                  hipMemGenericAllocationHandle_t handle) {
-    CUmemAllocationProp cuProp = hipMemAllocationPropToCUmemAllocationProp(prop);
-    return hipCUResultTohipError(cuMemGetAllocationPropertiesFromHandle(&cuProp, handle));
+    CUmemAllocationProp cuProp;
+    auto err = cuMemGetAllocationPropertiesFromHandle(&cuProp, handle);
+    *prop = CUmemAllocationPropToHipMemAllocationProp(&cuProp);
+    return hipCUResultTohipError(err);
 }
 inline static hipError_t hipMemImportFromShareableHandle(hipMemGenericAllocationHandle_t* handle,
                                                          void* osHandle,
