@@ -8,12 +8,12 @@ resources:
     type: github
     endpoint: ROCm
     name: ROCm/clr
-    ref: amd-staging
+    ref: $(Build.SourceBranch)
   - repository: hipother_repo
     type: github
     endpoint: ROCm
     name: ROCm/HIP # leverage HIP job that builds both AMD and NV backends
-    ref: amd-staging
+    ref: $(Build.SourceBranch)
 
 variables:
 - group: common
