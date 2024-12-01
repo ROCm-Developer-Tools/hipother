@@ -39,6 +39,7 @@ THE SOFTWARE.
 #define CUDA_11040 11040
 #define CUDA_11060 11060
 #define CUDA_12000 12000
+#define CUDA_12020 12020
 #define CUDA_12030 12030
 
 #ifdef __cplusplus
@@ -190,11 +191,11 @@ inline static CUarray_format hipArray_FormatToCUarray_format(
 #define HIP_TR_ADDRESS_MODE_MIRROR CU_TR_ADDRESS_MODE_MIRROR
 #define HIP_TR_ADDRESS_MODE_BORDER CU_TR_ADDRESS_MODE_BORDER
 
-// hipAddress_mode
-#define hipAddress_mode CUaddress_mode
+// HIPAddress_mode
+#define HIPaddress_mode CUaddress_mode
 
 inline static CUaddress_mode hipAddress_modeToCUaddress_mode(
-    hipAddress_mode mode) {
+    HIPaddress_mode mode) {
     switch (mode) {
         case HIP_TR_ADDRESS_MODE_WRAP:
             return CU_TR_ADDRESS_MODE_WRAP;
@@ -254,6 +255,9 @@ inline static CUresourcetype hipResourcetype_enumToCUresourcetype(
 
 // hipStreamPerThread
 #define hipStreamPerThread ((cudaStream_t)2)
+
+// hipStreamLegacy
+#define hipStreamLegacy ((cudaStream_t)1)
 
 #define hipTexRef CUtexref
 typedef CUmipmappedArray hipmipmappedArray;
@@ -368,6 +372,11 @@ typedef enum cudaResourceViewFormat hipResourceViewFormat;
 #define hipHostMallocWriteCombined cudaHostAllocWriteCombined
 #define hipHostMallocCoherent 0x0
 #define hipHostMallocNonCoherent 0x0
+
+#define hipHostAllocDefault cudaHostAllocDefault
+#define hipHostAllocPortable cudaHostAllocPortable
+#define hipHostAllocMapped cudaHostAllocMapped
+#define hipHostAllocWriteCombined cudaHostAllocWriteCombined
 
 #define hipMemAttachGlobal cudaMemAttachGlobal
 #define hipMemAttachHost cudaMemAttachHost
@@ -752,13 +761,6 @@ typedef enum cudaGraphInstantiateFlags hipGraphInstantiateFlags;
 #define hipGraphInstantiateFlagDeviceLaunch cudaGraphInstantiateFlagDeviceLaunch
 #define hipGraphInstantiateFlagUseNodePriority cudaGraphInstantiateFlagUseNodePriority
 
-#if CUDA_VERSION >= CUDA_9000
-#define __shfl(...)      __shfl_sync(0xffffffff, __VA_ARGS__)
-#define __shfl_up(...)   __shfl_up_sync(0xffffffff, __VA_ARGS__)
-#define __shfl_down(...) __shfl_down_sync(0xffffffff, __VA_ARGS__)
-#define __shfl_xor(...)  __shfl_xor_sync(0xffffffff, __VA_ARGS__)
-#endif // CUDA_VERSION >= CUDA_9000
-
 inline static hipError_t hipCUDAErrorTohipError(cudaError_t cuError) {
     switch (cuError) {
         case cudaSuccess:
@@ -903,6 +905,10 @@ inline static hipError_t hipCUDAErrorTohipError(cudaError_t cuError) {
             return hipErrorStreamCaptureWrongThread;
         case cudaErrorGraphExecUpdateFailure:
             return hipErrorGraphExecUpdateFailure;
+        case cudaErrorInvalidChannelDescriptor:
+            return hipErrorInvalidChannelDescriptor;
+        case cudaErrorInvalidTexture:
+            return hipErrorInvalidTexture;
         case cudaErrorUnknown:
         default:
             return hipErrorUnknown;  // Note - translated error.
@@ -1349,6 +1355,10 @@ inline static cudaError_t hipErrorToCudaError(hipError_t hError) {
             return cudaErrorGraphExecUpdateFailure;
         case hipErrorNotSupported:
             return cudaErrorNotSupported;
+        case hipErrorInvalidChannelDescriptor:
+            return cudaErrorInvalidChannelDescriptor;
+        case hipErrorInvalidTexture:
+            return cudaErrorInvalidTexture;
         // HSA: does not exist in CUDA
         case hipErrorRuntimeMemory:
         // HSA: does not exist in CUDA
@@ -1504,6 +1514,8 @@ typedef enum cudaExternalSemaphoreHandleType hipExternalSemaphoreHandleType;
 typedef struct cudaExternalSemaphoreHandleDesc hipExternalSemaphoreHandleDesc;
 typedef cudaExternalSemaphore_t hipExternalSemaphore_t;
 typedef struct cudaExternalSemaphoreSignalParams hipExternalSemaphoreSignalParams;
+typedef struct cudaExternalSemaphoreSignalNodeParams hipExternalSemaphoreSignalNodeParams;
+typedef struct cudaExternalSemaphoreWaitNodeParams hipExternalSemaphoreWaitNodeParams;
 typedef struct cudaExternalSemaphoreWaitParams hipExternalSemaphoreWaitParams;
 
 typedef struct cudaGraphicsResource hipGraphicsResource;
@@ -1547,6 +1559,9 @@ typedef cudaHostFn_t hipHostFn_t;
 typedef struct cudaHostNodeParams hipHostNodeParams;
 typedef struct cudaKernelNodeParams hipKernelNodeParams;
 typedef struct cudaMemsetParams hipMemsetParams;
+#if CUDA_VERSION >= CUDA_12020
+typedef struct cudaGraphNodeParams hipGraphNodeParams;
+#endif
 
 #if CUDA_VERSION >= CUDA_11040
 typedef struct cudaMemAllocNodeParams hipMemAllocNodeParams;
@@ -1739,7 +1754,6 @@ inline static hipError_t hipMemAllocHost(void** ptr, size_t size) {
     return hipCUResultTohipError(cuMemAllocHost(ptr, size));
 }
 
-__HIP_DEPRECATED_MSG("use hipHostMalloc instead")
 inline static hipError_t hipHostAlloc(void** ptr, size_t size, unsigned int flags) {
     return hipCUDAErrorTohipError(cudaHostAlloc(ptr, size, flags));
 }
@@ -1847,7 +1861,6 @@ inline static hipError_t hipHostUnregister(void* ptr) {
     return hipCUDAErrorTohipError(cudaHostUnregister(ptr));
 }
 
-__HIP_DEPRECATED_MSG("use hipHostFree instead")
 inline static hipError_t hipFreeHost(void* ptr) {
     return hipCUDAErrorTohipError(cudaFreeHost(ptr));
 }
@@ -3259,6 +3272,11 @@ inline static hipError_t hipGetTextureObjectResourceDesc(hipResourceDesc* pResDe
 }
 
 #if CUDA_VERSION < CUDA_12000
+__HIP_DEPRECATED inline static hipError_t hipGetTextureReference(const struct textureReference** texref,
+                                                                 const void* symbol) {
+    return hipCUDAErrorTohipError(cudaGetTextureReference(texref, symbol));
+}
+
 __HIP_DEPRECATED inline static hipError_t hipGetTextureAlignmentOffset(
     size_t* offset, const struct textureReference* texref) {
     return hipCUDAErrorTohipError(cudaGetTextureAlignmentOffset(offset,texref));
@@ -3590,12 +3608,32 @@ inline static hipError_t hipTexObjectGetTextureDesc(HIP_TEXTURE_DESC* pTexDesc, 
     return hipCUResultTohipError(cuTexObjectGetTextureDesc(pTexDesc, (CUtexObject)texObject));
 }
 
-__HIP_DEPRECATED inline static hipError_t hipTexRefSetAddressMode(hipTexRef hTexRef, int dim, hipAddress_mode am){
+__HIP_DEPRECATED inline static hipError_t hipTexRefGetArray(hipArray_t* pArray, hipTexRef texRef) {
+    return hipCUResultTohipError(cuTexRefGetArray((CUarray*)pArray, texRef));
+}
+
+__HIP_DEPRECATED inline static hipError_t hipTexRefGetAddressMode(HIPaddress_mode *pam, hipTexRef hTexRef, int dim){
+    return hipCUResultTohipError(cuTexRefGetAddressMode(pam, hTexRef, dim));
+}
+
+__HIP_DEPRECATED inline static hipError_t hipTexRefSetAddressMode(hipTexRef hTexRef, int dim, HIPaddress_mode am){
     return hipCUResultTohipError(cuTexRefSetAddressMode(hTexRef,dim,am));
 }
 
 __HIP_DEPRECATED inline static hipError_t hipTexRefSetFilterMode(hipTexRef hTexRef, hipFilter_mode fm){
     return hipCUResultTohipError(cuTexRefSetFilterMode(hTexRef,fm));
+}
+
+__HIP_DEPRECATED inline static hipError_t hipTexRefGetBorderColor(float* pBorderColor, hipTexRef hTexRef){
+    return hipCUResultTohipError(cuTexRefGetBorderColor(pBorderColor, hTexRef));
+}
+
+__HIP_DEPRECATED inline static hipError_t hipTexRefSetBorderColor(hipTexRef hTexRef, float* pBorderColor){
+    return hipCUResultTohipError(cuTexRefSetBorderColor(hTexRef, pBorderColor));
+}
+
+inline static hipError_t hipTexRefGetAddress(hipDeviceptr_t* dev_ptr, hipTexRef texRef) {
+    return hipCUResultTohipError(cuTexRefGetAddress(dev_ptr, texRef));
 }
 
 inline static hipError_t hipTexRefSetAddress(size_t *ByteOffset, hipTexRef hTexRef, hipDeviceptr_t dptr, size_t bytes){
@@ -3606,8 +3644,16 @@ inline static hipError_t hipTexRefSetAddress2D(hipTexRef hTexRef, const CUDA_ARR
     return hipCUResultTohipError(cuTexRefSetAddress2D(hTexRef,desc,dptr,Pitch));
 }
 
+__HIP_DEPRECATED inline static hipError_t hipTexRefGetFormat(hipArray_Format *fmt, int *NumPackedComponents, hipTexRef hTexRef){
+    return hipCUResultTohipError(cuTexRefGetFormat(fmt, NumPackedComponents, hTexRef));
+}
+
 __HIP_DEPRECATED inline static hipError_t hipTexRefSetFormat(hipTexRef hTexRef, hipArray_Format fmt, int NumPackedComponents){
     return hipCUResultTohipError(cuTexRefSetFormat(hTexRef,fmt,NumPackedComponents));
+}
+
+__HIP_DEPRECATED inline static hipError_t hipTexRefGetFlags(unsigned int *pFlags, hipTexRef hTexRef){
+    return hipCUResultTohipError(cuTexRefGetFlags(pFlags, hTexRef));
 }
 
 __HIP_DEPRECATED inline static hipError_t hipTexRefSetFlags(hipTexRef hTexRef, unsigned int Flags){
@@ -3616,6 +3662,14 @@ __HIP_DEPRECATED inline static hipError_t hipTexRefSetFlags(hipTexRef hTexRef, u
 
 __HIP_DEPRECATED inline static hipError_t hipTexRefSetArray(hipTexRef hTexRef, hipArray_t hArray, unsigned int Flags){
     return hipCUResultTohipError(cuTexRefSetArray(hTexRef,(CUarray)hArray,Flags));
+}
+
+__HIP_DEPRECATED inline static hipError_t hipTexRefGetMaxAnisotropy(int* pmaxAniso, hipTexRef hTexRef) {
+    return hipCUResultTohipError(cuTexRefGetMaxAnisotropy(pmaxAniso, hTexRef));
+}
+
+__HIP_DEPRECATED inline static hipError_t hipTexRefSetMaxAnisotropy(hipTexRef hTexRef, unsigned int maxAniso) {
+    return hipCUResultTohipError(cuTexRefSetMaxAnisotropy(hTexRef, maxAniso));
 }
 
 inline static hipError_t hipArrayCreate(hipArray_t* pHandle, const HIP_ARRAY_DESCRIPTOR* pAllocateArray){
@@ -3657,6 +3711,14 @@ inline static hipError_t hipStreamBeginCaptureToGraph(hipStream_t stream, hipGra
     return hipCUDAErrorTohipError(cudaStreamBeginCaptureToGraph(
         stream, graph, dependencies, dependencyData, numDependencies, mode));
 }
+
+inline static hipError_t hipGraphNodeGetDependentNodes_v2(hipGraphNode_t node,
+                                                          hipGraphNode_t* pDependentNodes,
+                                                          hipGraphEdgeData* edgeData,
+                                                          size_t* pNumDependentNodes) {
+    return hipCUDAErrorTohipError(
+        cudaGraphNodeGetDependentNodes_v2(node, pDependentNodes, edgeData, pNumDependentNodes));
+}
 #endif
 inline static hipError_t hipStreamEndCapture(hipStream_t stream, hipGraph_t* pGraph) {
     return hipCUDAErrorTohipError(cudaStreamEndCapture(stream, pGraph));
@@ -3687,6 +3749,10 @@ inline static hipError_t hipGraphInstantiateWithParams(hipGraphExec_t* pGraphExe
                                                        {
     return hipCUDAErrorTohipError(cudaGraphInstantiateWithParams(pGraphExec, graph,
                                                                  instantiateParams));
+}
+
+inline static hipError_t hipGraphExecGetFlags(hipGraphExec_t graphExec, unsigned long long* flags) {
+    return hipCUDAErrorTohipError(cudaGraphExecGetFlags(graphExec, flags));
 }
 #endif
 
@@ -4103,6 +4169,74 @@ inline static hipError_t hipGraphHostNodeGetParams(hipGraphNode_t node,
                                                    hipHostNodeParams* pNodeParams) {
     return hipCUDAErrorTohipError(cudaGraphHostNodeGetParams(node, pNodeParams));
 }
+
+inline static hipError_t hipGraphExecExternalSemaphoresSignalNodeSetParams(
+    hipGraphExec_t hGraphExec, hipGraphNode_t hNode,
+    const hipExternalSemaphoreSignalNodeParams* nodeParams) {
+    return hipCUDAErrorTohipError(
+        cudaGraphExecExternalSemaphoresSignalNodeSetParams(hGraphExec, hNode, nodeParams));
+}
+
+inline static hipError_t hipGraphExecExternalSemaphoresWaitNodeSetParams(
+    hipGraphExec_t hGraphExec, hipGraphNode_t hNode,
+    const hipExternalSemaphoreWaitNodeParams* nodeParams) {
+    return hipCUDAErrorTohipError(
+        cudaGraphExecExternalSemaphoresWaitNodeSetParams(hGraphExec, hNode, nodeParams));
+}
+
+inline static hipError_t hipGraphAddExternalSemaphoresSignalNode(
+    hipGraphNode_t* pGraphNode, hipGraph_t graph, const hipGraphNode_t* pDependencies,
+    size_t numDependencies, const hipExternalSemaphoreSignalNodeParams* nodeParams) {
+    return hipCUDAErrorTohipError(cudaGraphAddExternalSemaphoresSignalNode(
+        pGraphNode, graph, pDependencies, numDependencies, nodeParams));
+}
+
+inline static hipError_t hipGraphAddExternalSemaphoresWaitNode(
+    hipGraphNode_t* pGraphNode, hipGraph_t graph, const hipGraphNode_t* pDependencies,
+    size_t numDependencies, const hipExternalSemaphoreWaitNodeParams* nodeParams) {
+    return hipCUDAErrorTohipError(cudaGraphAddExternalSemaphoresWaitNode(
+        pGraphNode, graph, pDependencies, numDependencies, nodeParams));
+}
+
+inline static hipError_t hipGraphExternalSemaphoresSignalNodeSetParams(
+    hipGraphNode_t hNode, const hipExternalSemaphoreSignalNodeParams* nodeParams) {
+    return hipCUDAErrorTohipError(
+        cudaGraphExternalSemaphoresSignalNodeSetParams(hNode, nodeParams));
+}
+
+inline static hipError_t hipGraphExternalSemaphoresWaitNodeGetParams(
+    hipGraphNode_t hNode, hipExternalSemaphoreWaitNodeParams* paramsOut) {
+    return hipCUDAErrorTohipError(cudaGraphExternalSemaphoresWaitNodeGetParams(hNode, paramsOut));
+}
+
+inline static hipError_t hipGraphExternalSemaphoresWaitNodeSetParams(
+    hipGraphNode_t hNode, const hipExternalSemaphoreWaitNodeParams* nodeParams) {
+    return hipCUDAErrorTohipError(cudaGraphExternalSemaphoresWaitNodeSetParams(hNode, nodeParams));
+}
+
+inline static hipError_t hipGraphExternalSemaphoresSignalNodeGetParams(
+    hipGraphNode_t hNode, hipExternalSemaphoreSignalNodeParams* paramsOut) {
+    return hipCUDAErrorTohipError(cudaGraphExternalSemaphoresSignalNodeGetParams(hNode, paramsOut));
+}
+
+#if CUDA_VERSION >= CUDA_12020
+inline static hipError_t hipGraphAddNode(hipGraphNode_t* pGraphNode, hipGraph_t graph,
+                                         const hipGraphNode_t* pDependencies,
+                                         size_t numDependencies, hipGraphNodeParams* nodeParams) {
+    return hipCUDAErrorTohipError(
+        cudaGraphAddNode(pGraphNode, graph, pDependencies, numDependencies, nodeParams));
+}
+
+inline static hipError_t hipGraphExecNodeSetParams(hipGraphExec_t graphExec, hipGraphNode_t node,
+                                                   hipGraphNodeParams* nodeParams) {
+    return hipCUDAErrorTohipError(cudaGraphExecNodeSetParams(graphExec, node, nodeParams));
+}
+
+inline static hipError_t hipGraphNodeSetParams(hipGraphNode_t node,
+                                               hipGraphNodeParams* nodeParams) {
+    return hipCUDAErrorTohipError(cudaGraphNodeSetParams(node, nodeParams));
+}
+#endif
 
 #if CUDA_VERSION >= CUDA_11010
 inline static hipError_t hipGraphMemcpyNodeSetParams1D(hipGraphNode_t node, void* dst,
