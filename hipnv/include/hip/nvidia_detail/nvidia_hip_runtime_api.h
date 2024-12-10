@@ -3070,7 +3070,7 @@ inline static hipError_t hipEventRecord(hipEvent_t event, hipStream_t stream __d
 }
 
 inline static hipError_t hipEventRecordWithFlags(hipEvent_t event, hipStream_t stream __dparm(0),
-                                                 unsigned int flags __dparm(0))
+                                                 unsigned int flags __dparm(0)) {
     return hipCUDAErrorTohipError(cudaEventRecordWithFlags(event, stream, flags));
 }
 
