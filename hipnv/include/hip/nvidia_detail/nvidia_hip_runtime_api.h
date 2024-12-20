@@ -31,6 +31,7 @@ THE SOFTWARE.
 #include <stdio.h>
 
 #define CUDA_9000 9000
+#define CUDA_10000 10000
 #define CUDA_10010 10010
 #define CUDA_10020 10020
 #define CUDA_11010 11010
@@ -365,6 +366,9 @@ typedef enum cudaResourceViewFormat hipResourceViewFormat;
 #define hipEventReleaseToDevice 0 /* no-op on CUDA platform */
 #define hipEventReleaseToSystem 0 /* no-op on CUDA platform */
 
+//! Flags that can be used with hipEventRecordWithFlags.
+#define hipEventRecordDefault cudaEventRecordDefault
+#define hipEventRecordExternal cudaEventRecordExternal
 
 #define hipHostMallocDefault cudaHostAllocDefault
 #define hipHostMallocPortable cudaHostAllocPortable
@@ -515,6 +519,122 @@ static inline void hipResourceDesTocudaResourceDes(CUDA_RESOURCE_DESC* a, const 
     a->flags = p->flags;
 }
 
+/** Operations for hipStreamBatchMemOp*/
+typedef enum hipStreamBatchMemOpType {
+    hipStreamMemOpWaitValue32 = 0x1,
+    hipStreamMemOpWriteValue32 = 0x2,
+    hipStreamMemOpWaitValue64 = 0x4,
+    hipStreamMemOpWriteValue64 = 0x5,
+    hipStreamMemOpBarrier = 0x6,          ///< Currently not supported
+    hipStreamMemOpFlushRemoteWrites = 0x3 ///< Currently not supported
+} hipStreamBatchMemOpType;
+
+inline static CUstreamBatchMemOpType hipStreamBatchMemOpType_enumToCUstreamBatchMemOpType(
+    hipStreamBatchMemOpType memOpType) {
+    switch (memOpType) {
+    case hipStreamMemOpWaitValue32:
+        return CU_STREAM_MEM_OP_WAIT_VALUE_32;
+    case hipStreamMemOpWriteValue32:
+        return CU_STREAM_MEM_OP_WRITE_VALUE_32;
+    case hipStreamMemOpWaitValue64:
+        return CU_STREAM_MEM_OP_WAIT_VALUE_64;
+    case hipStreamMemOpWriteValue64:
+        return CU_STREAM_MEM_OP_WRITE_VALUE_64;
+    case hipStreamMemOpBarrier:
+        return CU_STREAM_MEM_OP_BARRIER;
+    case hipStreamMemOpFlushRemoteWrites:
+        return CU_STREAM_MEM_OP_FLUSH_REMOTE_WRITES;
+    default:
+        return CU_STREAM_MEM_OP_WAIT_VALUE_32;
+    }
+}
+
+typedef union hipStreamBatchMemOpParams_union {
+    hipStreamBatchMemOpType operation;
+    struct hipStreamMemOpWaitValueParams_t {
+        hipStreamBatchMemOpType operation;
+        hipDeviceptr_t address;
+        union {
+            uint32_t value;
+            uint64_t value64;
+        };
+        unsigned int flags;
+        hipDeviceptr_t alias; ///< Not valid for AMD backend. Initial value is unimportant
+    } waitValue;
+    struct hipStreamMemOpWriteValueParams_t {
+        hipStreamBatchMemOpType operation;
+        hipDeviceptr_t address;
+        union {
+            uint32_t value;
+            uint64_t value64;
+        };
+        unsigned int flags;
+        hipDeviceptr_t alias; ///< Not valid for AMD backend. Initial value is unimportant
+    } writeValue;
+    struct hipStreamMemOpFlushRemoteWritesParams_t {
+        hipStreamBatchMemOpType operation;
+        unsigned int flags;
+    } flushRemoteWrites; ///< Currently not supported on AMD
+    struct hipStreamMemOpMemoryBarrierParams_t {
+        hipStreamBatchMemOpType operation;
+        unsigned int flags;
+    } memoryBarrier; ///< Currently not supported on AMD
+    uint64_t pad[6];
+} hipStreamBatchMemOpParams;
+// hipStreamBatchMemOpType
+
+typedef struct hipBatchMemOpNodeParams {
+    hipCtx_t ctx;
+    unsigned int count;
+    hipStreamBatchMemOpParams *paramArray;
+    unsigned int flags;
+} hipBatchMemOpNodeParams;
+
+#define hipStreamBatchMemOpType CUstreamBatchMemOpType
+
+static inline void hipBatchMemOpParamsTocudaBatchMemOpParams(CUstreamBatchMemOpParams* a,
+                                                             const hipStreamBatchMemOpParams* p,
+                                                             unsigned int count) {
+    for (unsigned int i = 0; i < count; i++) {
+        if (p[i].waitValue.operation == hipStreamMemOpWaitValue32) {
+            a[i].waitValue.operation = CU_STREAM_MEM_OP_WAIT_VALUE_32;
+            a[i].waitValue.address = p[i].waitValue.address;
+            a[i].waitValue.value = (cuuint32_t)(p[i].waitValue.value);
+            a[i].waitValue.flags = p[i].waitValue.flags;
+            a[i].waitValue.alias = (CUdeviceptr)(p[i].waitValue.alias);
+        }
+        else if (p[i].writeValue.operation == hipStreamMemOpWriteValue32) {
+            a[i].writeValue.operation = CU_STREAM_MEM_OP_WRITE_VALUE_32;
+            a[i].writeValue.address = p[i].writeValue.address;
+            a[i].writeValue.value = (cuuint32_t)(p[i].writeValue.value);
+            a[i].writeValue.flags = p[i].writeValue.flags;
+            a[i].writeValue.alias = (CUdeviceptr)(p[i].writeValue.alias);
+        }
+        else if (p[i].waitValue.operation == hipStreamMemOpWaitValue64) {
+            a[i].waitValue.operation = CU_STREAM_MEM_OP_WAIT_VALUE_64;
+            a[i].waitValue.address = p[i].waitValue.address;
+            a[i].waitValue.value64 = (cuuint64_t)(p[i].waitValue.value64);
+            a[i].waitValue.flags = p[i].waitValue.flags;
+            a[i].waitValue.alias = (CUdeviceptr)(p[i].waitValue.alias);
+        }
+        else if (p[i].writeValue.operation == hipStreamMemOpWriteValue64) {
+            a[i].writeValue.operation = CU_STREAM_MEM_OP_WRITE_VALUE_64;
+            a[i].writeValue.address = p[i].writeValue.address;
+            a[i].writeValue.value64 = (cuuint64_t)(p[i].writeValue.value64);
+            a[i].writeValue.flags = p[i].writeValue.flags;
+            a[i].writeValue.alias = (CUdeviceptr)(p[i].writeValue.alias);
+        }
+        else if (p[i].memoryBarrier.operation == hipStreamMemOpBarrier) {
+            a[i].memoryBarrier.operation == CU_STREAM_MEM_OP_BARRIER;
+            a[i].memoryBarrier.flags = p[i].memoryBarrier.flags;
+        }
+        else if (p[i].flushRemoteWrites.operation == hipStreamMemOpFlushRemoteWrites) {
+            a[i].flushRemoteWrites.operation = CU_STREAM_MEM_OP_FLUSH_REMOTE_WRITES;
+            a[i].flushRemoteWrites.flags = p[i].flushRemoteWrites.flags;
+        }
+    }
+}
+
 typedef struct hip_Memcpy2D {
     size_t srcXInBytes;
     size_t srcY;
@@ -610,6 +730,56 @@ static inline void hipMemcpy3DTocudaMemcpy3D(CUDA_MEMCPY3D* a, const HIP_MEMCPY3
     a->WidthInBytes = (size_t)p->WidthInBytes;
     a->Height = (size_t)p->Height;
     a->Depth = (size_t)p->Depth;
+}
+
+static inline void cudaMemcpy3DToHipMemcpy3D(HIP_MEMCPY3D* a, const CUDA_MEMCPY3D* p) {
+    a->srcXInBytes = (unsigned int)p->srcXInBytes;
+    a->srcY = (unsigned int)p->srcY;
+    a->srcZ = (unsigned int)p->srcZ;
+    a->srcLOD = (unsigned int)p->srcLOD;
+    switch (p->srcMemoryType) {
+        case CU_MEMORYTYPE_HOST:
+            a->srcMemoryType = hipMemoryTypeHost;
+            break;
+        case CU_MEMORYTYPE_DEVICE:
+            a->srcMemoryType = hipMemoryTypeDevice;
+            break;
+        case CU_MEMORYTYPE_ARRAY:
+            a->srcMemoryType = hipMemoryTypeArray;
+            break;
+        default:
+            a->srcMemoryType = hipMemoryTypeUnified;
+    }
+    a->srcHost = p->srcHost;
+    a->srcDevice =(hipDeviceptr_t)p->srcDevice;
+    a->srcArray = (hipArray_t)p->srcArray;
+    a->srcPitch = (unsigned int)p->srcPitch;
+    a->srcHeight = (unsigned int)p->srcHeight;
+    a->dstXInBytes = (unsigned int)p->dstXInBytes;
+    a->dstY = (unsigned int)p->dstY;
+    a->dstZ = (unsigned int)p->dstZ;
+    a->dstLOD = (unsigned int)p->dstLOD;
+    switch (p->dstMemoryType) {
+        case CU_MEMORYTYPE_HOST:
+            a->dstMemoryType = hipMemoryTypeHost;
+            break;
+        case CU_MEMORYTYPE_DEVICE:
+            a->dstMemoryType = hipMemoryTypeDevice;
+            break;
+        case CU_MEMORYTYPE_ARRAY:
+            a->dstMemoryType = hipMemoryTypeArray;
+            break;
+        default:
+            a->dstMemoryType = hipMemoryTypeUnified;
+    }
+    a->dstHost = p->dstHost;
+    a->dstDevice = (hipDeviceptr_t)p->dstDevice;
+    a->dstArray = (hipArray_t)p->dstArray;
+    a->dstPitch = (unsigned int)p->dstPitch;
+    a->dstHeight = (unsigned int)p->dstHeight;
+    a->WidthInBytes = (unsigned int)p->WidthInBytes;
+    a->Height = (unsigned int)p->Height;
+    a->Depth = (unsigned int)p->Depth;
 }
 
 static inline void hipMemcpy2DTocudaMemcpy2D(CUDA_MEMCPY2D* a, const hip_Memcpy2D* p){
@@ -1678,7 +1848,7 @@ typedef struct hipMemAllocationProp {
     /** Memory allocation type */
     hipMemAllocationType type;
     /** Requested handle type */
-    hipMemAllocationHandleType requestedHandleTypes;
+    hipMemAllocationHandleType requestedHandleType;
     /** Location of allocation */
     hipMemLocation location;
     /**
@@ -2639,7 +2809,7 @@ inline static hipError_t hipDeviceGetAttribute(int* pi, hipDeviceAttribute_t att
 inline static CUmemAllocationProp hipMemAllocationPropToCUmemAllocationProp(const hipMemAllocationProp* prop) {
     CUmemAllocationProp cuProp;
     cuProp.type = (CUmemAllocationType)prop->type;
-    cuProp.requestedHandleTypes = (CUmemAllocationHandleType)prop->requestedHandleTypes;
+    cuProp.requestedHandleTypes = (CUmemAllocationHandleType)prop->requestedHandleType;
     cuProp.location.type = (CUmemLocationType)prop->location.type;
     cuProp.location.id = prop->location.id;
     cuProp.win32HandleMetaData = prop->win32HandleMetaData;
@@ -2651,6 +2821,22 @@ inline static CUmemAllocationProp hipMemAllocationPropToCUmemAllocationProp(cons
     cuProp.allocFlags.reserved[2] = prop->allocFlags.reserved[2];
     cuProp.allocFlags.reserved[3] = prop->allocFlags.reserved[3];
     return cuProp;
+}
+inline static hipMemAllocationProp CUmemAllocationPropToHipMemAllocationProp(const CUmemAllocationProp* prop) {
+  hipMemAllocationProp hipProp;
+  hipProp.type = (hipMemAllocationType)prop->type;
+  hipProp.requestedHandleType = (hipMemAllocationHandleType)prop->requestedHandleTypes;
+  hipProp.location.type = (hipMemLocationType)prop->location.type;
+  hipProp.location.id = prop->location.id;
+  hipProp.win32HandleMetaData = prop->win32HandleMetaData;
+  hipProp.allocFlags.compressionType = prop->allocFlags.compressionType;
+  hipProp.allocFlags.gpuDirectRDMACapable = prop->allocFlags.gpuDirectRDMACapable;
+  hipProp.allocFlags.usage = prop->allocFlags.usage;
+  hipProp.allocFlags.reserved[0] = prop->allocFlags.reserved[0];
+  hipProp.allocFlags.reserved[1] = prop->allocFlags.reserved[1];
+  hipProp.allocFlags.reserved[2] = prop->allocFlags.reserved[2];
+  hipProp.allocFlags.reserved[3] = prop->allocFlags.reserved[3];
+  return hipProp;
 }
 inline static CUmemLocation hipMemLocationToCUmemLocation(const hipMemLocation* loc) {
     CUmemLocation cuLoc;
@@ -2705,8 +2891,10 @@ inline static hipError_t hipMemGetAccess(unsigned long long* flags,
 }
 inline static hipError_t hipMemGetAllocationPropertiesFromHandle(hipMemAllocationProp* prop,
                                                                  hipMemGenericAllocationHandle_t handle) {
-    CUmemAllocationProp cuProp = hipMemAllocationPropToCUmemAllocationProp(prop);
-    return hipCUResultTohipError(cuMemGetAllocationPropertiesFromHandle(&cuProp, handle));
+    CUmemAllocationProp cuProp;
+    auto err = cuMemGetAllocationPropertiesFromHandle(&cuProp, handle);
+    *prop = CUmemAllocationPropToHipMemAllocationProp(&cuProp);
+    return hipCUResultTohipError(err);
 }
 inline static hipError_t hipMemImportFromShareableHandle(hipMemGenericAllocationHandle_t* handle,
                                                          void* osHandle,
@@ -2855,6 +3043,11 @@ inline static hipError_t hipEventCreate(hipEvent_t* event) {
 
 inline static hipError_t hipEventRecord(hipEvent_t event, hipStream_t stream __dparm(NULL)) {
     return hipCUDAErrorTohipError(cudaEventRecord(event, stream));
+}
+
+inline static hipError_t hipEventRecordWithFlags(hipEvent_t event, hipStream_t stream __dparm(0),
+                                                 unsigned int flags __dparm(0)) {
+    return hipCUDAErrorTohipError(cudaEventRecordWithFlags(event, stream, flags));
 }
 
 inline static hipError_t hipEventSynchronize(hipEvent_t event) {
@@ -3939,6 +4132,67 @@ inline static hipError_t hipStreamWaitValue64(hipStream_t stream, void* ptr, int
                                                      static_cast<cuuint64_t>(value), flags));
 }
 
+inline static hipError_t hipStreamBatchMemOp(hipStream_t stream, unsigned int count,
+                                             hipStreamBatchMemOpParams* paramArray,
+                                             unsigned int flags) {
+    CUstreamBatchMemOpParams* cuParamArray = new CUstreamBatchMemOpParams[count];
+    hipBatchMemOpParamsTocudaBatchMemOpParams(cuParamArray, paramArray, count);
+    return hipCUResultTohipError(cuStreamBatchMemOp(stream, count, cuParamArray, flags));
+}
+
+inline static hipError_t hipGraphAddBatchMemOpNode(hipGraphNode_t* phGraphNode, hipGraph_t hGraph,
+                                                   const hipGraphNode_t* dependencies,
+                                                   size_t numDependencies,
+                                                   const hipBatchMemOpNodeParams* nodeParams) {
+    CUDA_BATCH_MEM_OP_NODE_PARAMS cuBatchMemOpNodeParams;
+    CUstreamBatchMemOpParams* cuParamArray = new CUstreamBatchMemOpParams[nodeParams->count];
+    hipBatchMemOpParamsTocudaBatchMemOpParams(
+        cuParamArray, nodeParams->paramArray, nodeParams->count);
+    cuBatchMemOpNodeParams.ctx = (CUcontext)nodeParams->ctx;
+    cuBatchMemOpNodeParams.count = nodeParams->count;
+    cuBatchMemOpNodeParams.paramArray = cuParamArray;
+    cuBatchMemOpNodeParams.flags = nodeParams->flags;
+    return hipCUResultTohipError(cuGraphAddBatchMemOpNode(phGraphNode, hGraph, dependencies,
+                                                          numDependencies,
+                                                          &cuBatchMemOpNodeParams));
+    delete[] cuParamArray;
+}
+
+inline static hipError_t hipGraphBatchMemOpNodeGetParams(hipGraphNode_t hNode,
+                                                         hipBatchMemOpNodeParams* nodeParams_out) {
+    return hipCUResultTohipError(cuGraphBatchMemOpNodeGetParams(
+        hNode, (CUDA_BATCH_MEM_OP_NODE_PARAMS *)nodeParams_out));
+}
+
+inline static hipError_t hipGraphBatchMemOpNodeSetParams(hipGraphNode_t hNode,
+                                                         hipBatchMemOpNodeParams* nodeParams) {
+    CUstreamBatchMemOpParams* cuParamArray = new CUstreamBatchMemOpParams[nodeParams->count];
+    hipBatchMemOpParamsTocudaBatchMemOpParams(
+        cuParamArray, nodeParams->paramArray, nodeParams->count);
+    CUDA_BATCH_MEM_OP_NODE_PARAMS cuBatchMemOpNodeParams;
+    cuBatchMemOpNodeParams.ctx = (CUcontext)nodeParams->ctx;
+    cuBatchMemOpNodeParams.count = nodeParams->count;
+    cuBatchMemOpNodeParams.paramArray = cuParamArray;
+    cuBatchMemOpNodeParams.flags = nodeParams->flags;
+    return hipCUResultTohipError(cuGraphBatchMemOpNodeSetParams(hNode, &cuBatchMemOpNodeParams));
+    delete[] cuParamArray;
+}
+
+inline static hipError_t hipGraphExecBatchMemOpNodeSetParams(
+    hipGraphExec_t hGraphExec, hipGraphNode_t hNode, const hipBatchMemOpNodeParams* nodeParams) {
+    CUstreamBatchMemOpParams* cuParamArray = new CUstreamBatchMemOpParams[nodeParams->count];
+    hipBatchMemOpParamsTocudaBatchMemOpParams(
+        cuParamArray, nodeParams->paramArray, nodeParams->count);
+    CUDA_BATCH_MEM_OP_NODE_PARAMS cuBatchMemOpNodeParams;
+    cuBatchMemOpNodeParams.ctx = (CUcontext)nodeParams->ctx;
+    cuBatchMemOpNodeParams.count = nodeParams->count;
+    cuBatchMemOpNodeParams.paramArray = cuParamArray;
+    cuBatchMemOpNodeParams.flags = nodeParams->flags;
+    return hipCUResultTohipError(cuGraphExecBatchMemOpNodeSetParams(hGraphExec, hNode,
+                                                                    &cuBatchMemOpNodeParams));
+    delete[] cuParamArray;
+}
+
 inline static hipError_t hipGraphRemoveDependencies(hipGraph_t graph, const hipGraphNode_t* from,
                                                     const hipGraphNode_t* to,
                                                     size_t numDependencies) {
@@ -4343,6 +4597,65 @@ inline static hipError_t hipDrvGraphAddMemcpyNode(hipGraphNode_t* phGraphNode, h
                                     numDependencies, (const CUDA_MEMCPY3D*)&cudaCopy, ctx)));
     }
 }
+
+#if CUDA_VERSION >= CUDA_10000
+inline static hipError_t hipDrvGraphMemcpyNodeGetParams(hipGraphNode_t hNode,
+                                                        HIP_MEMCPY3D* nodeParams) {
+  if (nodeParams == nullptr) {
+    return hipCUResultTohipError(cuGraphMemcpyNodeGetParams(hNode, nullptr));
+  } else {
+    CUDA_MEMCPY3D cudaCopy = {0};
+    hipError_t err =
+        hipCUResultTohipError(cuGraphMemcpyNodeGetParams(hNode, (CUDA_MEMCPY3D*)&cudaCopy));
+    cudaMemcpy3DToHipMemcpy3D(nodeParams, &cudaCopy);
+    return err;
+  }
+}
+
+inline static hipError_t hipDrvGraphMemcpyNodeSetParams(hipGraphNode_t hNode,
+                                                        HIP_MEMCPY3D* nodeParams) {
+  if (nodeParams == nullptr) {
+    return hipCUResultTohipError(cuGraphMemcpyNodeSetParams(hNode, nullptr));
+  } else {
+    CUDA_MEMCPY3D cudaCopy = {0};
+    hipMemcpy3DTocudaMemcpy3D(&cudaCopy, nodeParams);
+    return hipCUResultTohipError(cuGraphMemcpyNodeSetParams(hNode, (CUDA_MEMCPY3D*)&cudaCopy));
+  }
+}
+#endif
+
+#if CUDA_VERSION >= CUDA_10020
+inline static hipError_t hipDrvGraphExecMemcpyNodeSetParams(hipGraphExec_t hGraphExec,
+                                                            hipGraphNode_t hNode,
+                                                            const HIP_MEMCPY3D* copyParams,
+                                                            hipCtx_t ctx) {
+  if (copyParams == nullptr) {
+    return hipCUResultTohipError(cuGraphExecMemcpyNodeSetParams(hGraphExec, hNode, nullptr, ctx));
+  } else {
+    CUDA_MEMCPY3D cudaCopy = {0};
+    hipMemcpy3DTocudaMemcpy3D(&cudaCopy, copyParams);
+    return hipCUResultTohipError(
+        cuGraphExecMemcpyNodeSetParams(hGraphExec, hNode, (CUDA_MEMCPY3D*)&cudaCopy, ctx));
+  }
+}
+
+inline static hipError_t hipDrvGraphExecMemsetNodeSetParams(
+    hipGraphExec_t hGraphExec, hipGraphNode_t hNode, const HIP_MEMSET_NODE_PARAMS* memsetParams,
+    hipCtx_t ctx) {
+  return hipCUResultTohipError(
+      cuGraphExecMemsetNodeSetParams(hGraphExec, hNode, memsetParams, ctx));
+}
+#endif
+
+#if CUDA_VERSION >= CUDA_11040
+inline static hipError_t hipDrvGraphAddMemFreeNode(hipGraphNode_t* phGraphNode, hipGraph_t hGraph,
+                                                   const hipGraphNode_t* dependencies,
+                                                   size_t numDependencies, hipDeviceptr_t dptr) {
+  return hipCUResultTohipError(
+      cuGraphAddMemFreeNode(phGraphNode, hGraph, dependencies, numDependencies, dptr));
+}
+#endif
+
 #endif
 #if CUDA_VERSION >= CUDA_11010
 inline static hipError_t hipGraphUpload(hipGraphExec_t graphExec, hipStream_t stream) {
